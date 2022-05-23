@@ -75,7 +75,7 @@ class Contract(SourceMapping):  # pylint: disable=too-many-public-methods
 
         # The only str is "*"
         self._using_for: Dict[Union[str, Type], List[str]] = {}
-        self._using_for_src: Dict[Union[str, Type], List[Tuple[str, "StateVariable"]]] = {}
+        self._using_for_src: Dict[Union[str, Type], List[Tuple[str, "Structure"]]] = {}
         self._kind: Optional[str] = None
         self._is_interface: bool = False
 
