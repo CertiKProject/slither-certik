@@ -37,6 +37,7 @@ if TYPE_CHECKING:
     from slither.slithir.variables.variable import SlithIRVariable
     from slither.core.variables.variable import Variable
     from slither.core.variables.state_variable import StateVariable
+    from slither.core.declarations.structure import Structure
     from slither.core.compilation_unit import SlitherCompilationUnit
     from slither.core.declarations.custom_error_contract import CustomErrorContract
     from slither.core.scope.scope import FileScope
@@ -248,7 +249,7 @@ class Contract(SourceMapping):  # pylint: disable=too-many-public-methods
         return self._using_for
 
     @property
-    def using_for_src(self) -> Dict[Union[str, Type], List[Tuple[str, "StateVariable"]]]:
+    def using_for_src(self) -> Dict[Union[str, Type], List[Tuple[str, "Structure"]]]:
         return self._using_for_src
 
     # endregion
