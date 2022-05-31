@@ -5,7 +5,6 @@ class EventCall(Call):
     def __init__(self, destination):
         super().__init__()
         self._destination = destination
-        # todo add instance of the Event
 
     @property
     def destination(self):
