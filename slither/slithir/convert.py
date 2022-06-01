@@ -805,7 +805,7 @@ def extract_tmp_call(ins: TmpCall, contract: Optional[Contract]):  # pylint: dis
                 internalcall.set_expression(ins.expression)
                 internalcall.call_id = ins.call_id
                 return internalcall
-            event_sym = resolve_event(ins.ori.variable_right, contract)
+            event_sym = resolve_event(str(ins.ori.variable_right), contract)
             if event_sym is not None:
                 eventcall = EventCall(event_sym)
                 eventcall.set_expression(ins.expression)
@@ -823,7 +823,7 @@ def extract_tmp_call(ins: TmpCall, contract: Optional[Contract]):  # pylint: dis
             # lib L { event E()}
             # ...
             # emit L.E();
-            event_sym = resolve_event(ins.ori.variable_right, ins.ori.variable_left)
+            event_sym = resolve_event(str(ins.ori.variable_right), ins.ori.variable_left)
             if event_sym is not None:
                 eventcall = EventCall(event_sym)
                 eventcall.set_expression(ins.expression)
