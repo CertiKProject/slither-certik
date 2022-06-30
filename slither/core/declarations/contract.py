@@ -80,7 +80,7 @@ class Contract(SourceMapping):  # pylint: disable=too-many-public-methods
         self._using_for_src: Dict[Union[str, Type], List[Tuple[Type, "StructureContract"]]] = {}
         self._kind: Optional[str] = None
         self._is_interface: bool = False
-        self._is_abstract = False
+        self._is_abstract: bool = False
 
         self._signatures: Optional[List[str]] = None
         self._signatures_declared: Optional[List[str]] = None
