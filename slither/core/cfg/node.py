@@ -193,9 +193,11 @@ class Node(SourceMapping, ChildFunction):  # pylint: disable=too-many-public-met
         self._ssa_vars_read: List["SlithIRVariable"] = []
 
         self._internal_calls: List["Function"] = []
+        self._internal_calls_ir: List["InternalCall"] = []
         self._solidity_calls: List[SolidityFunction] = []
         self._high_level_calls: List["HighLevelCallType"] = []  # contains library calls
         self._library_calls: List["LibraryCallType"] = []
+        self._library_calls_ir: List["LibraryCall"] = []
         self._low_level_calls: List["LowLevelCallType"] = []
         self._external_calls_as_expressions: List[Expression] = []
         self._internal_calls_as_expressions: List[Expression] = []
@@ -398,6 +400,13 @@ class Node(SourceMapping, ChildFunction):  # pylint: disable=too-many-public-met
         return list(self._internal_calls)
 
     @property
+    def internal_calls_ir(self) -> List["InternalCall"]:
+        """
+        list(InternalCall): List of internal/soldiity function calls
+        """
+        return list(self._internal_calls_ir)
+
+    @property
     def solidity_calls(self) -> List[SolidityFunction]:
         """
         list(SolidityFunction): List of Soldity calls
@@ -421,6 +430,13 @@ class Node(SourceMapping, ChildFunction):  # pylint: disable=too-many-public-met
         Include library calls
         """
         return list(self._library_calls)
+
+    @property
+    def library_calls_ir(self) -> List["LibraryCall"]:
+        """
+        list((LibraryCall)):
+        """
+        return list(self._library_calls_ir)
 
     @property
     def low_level_calls(self) -> List["LowLevelCallType"]:
@@ -895,6 +911,7 @@ class Node(SourceMapping, ChildFunction):  # pylint: disable=too-many-public-met
 
             if isinstance(ir, InternalCall):
                 self._internal_calls.append(ir.function)
+                self._internal_calls_ir.append(ir)
             if isinstance(ir, SolidityCall):
                 # TODO: consider removing dependancy of solidity_call to internal_call
                 self._solidity_calls.append(ir.function)
@@ -919,6 +936,7 @@ class Node(SourceMapping, ChildFunction):  # pylint: disable=too-many-public-met
                 assert isinstance(ir.destination, Contract)
                 self._high_level_calls.append((ir.destination, ir.function))
                 self._library_calls.append((ir.destination, ir.function))
+                self._library_calls_ir.append(ir)
 
         self._vars_read = list(set(self._vars_read))
         self._state_vars_read = [v for v in self._vars_read if isinstance(v, StateVariable)]
@@ -928,9 +946,11 @@ class Node(SourceMapping, ChildFunction):  # pylint: disable=too-many-public-met
         self._state_vars_written = [v for v in self._vars_written if isinstance(v, StateVariable)]
         self._local_vars_written = [v for v in self._vars_written if isinstance(v, LocalVariable)]
         self._internal_calls = list(set(self._internal_calls))
+        self._internal_calls_ir = list(set(self._internal_calls_ir))
         self._solidity_calls = list(set(self._solidity_calls))
         self._high_level_calls = list(set(self._high_level_calls))
         self._library_calls = list(set(self._library_calls))
+        self._library_calls_ir = list(set(self._library_calls_ir))
         self._low_level_calls = list(set(self._low_level_calls))
 
     @staticmethod

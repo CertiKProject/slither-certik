@@ -219,6 +219,11 @@ class Function(SourceMapping, metaclass=ABCMeta):  # pylint: disable=too-many-pu
 
         self._id: Optional[str] = None
 
+        # Function summary
+        self._summary_analyzed: bool = False
+        self._summary_analysis_in_progress: bool = False
+        self._function_summary: List[int] = []
+
     ###################################################################################
     ###################################################################################
     # region General properties
@@ -1727,3 +1732,50 @@ class Function(SourceMapping, metaclass=ABCMeta):  # pylint: disable=too-many-pu
         return self.name
 
     # endregion
+
+    @property
+    def summary_analyzed(self):
+        return self._summary_analyzed
+
+    @property
+    def summary_analysis_in_progress(self):
+        return self._summary_analysis_in_progress
+
+    @property
+    def function_summary(self):
+        if not self.summary_analyzed:
+            self.function_summary_analysis()
+        return self._function_summary
+
+
+    def param_called(self, parameters, arguments):
+        list = []
+        for param in parameters:
+            if param in arguments:
+                list.append(param)
+        return list
+
+    def function_summary_analysis(self):
+        if self.summary_analysis_in_progress:
+            self._function_summary = []
+            return
+        self._summary_analysis_in_progress = True
+        res = set()
+        param_in_storage = {para : index for index, para in enumerate(self.parameters) if para.is_storage}
+        for para in self.parameters:
+            if para in self.variables_written:
+                res.add(param_in_storage[para])
+                del param_in_storage[para]
+        if not len(param_in_storage) == 0:
+            for node in self.nodes:
+                for ir in node.library_calls_ir + node.internal_calls_ir:
+                    func = ir.function
+                    args = ir.arguments
+                    for para in self.param_called(param_in_storage.keys(), args):
+                        for index, arg in enumerate(args):
+                            if para == arg and index in func.function_summary:
+                                res.add(param_in_storage[para])
+        self._function_summary = list(res)
+        self._function_summary.sort()
+        self._summary_analysis_in_progress = False
+        self._summary_analyzed = True
