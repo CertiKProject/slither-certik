@@ -1,5 +1,5 @@
 import logging
-from typing import Dict, Optional, Union, List, TYPE_CHECKING
+from typing import Dict, Literal, Optional, Union, List, TYPE_CHECKING
 
 from slither.core.cfg.node import NodeType, link_nodes, insert_node, Node
 from slither.core.cfg.scope import Scope
@@ -663,19 +663,120 @@ class FunctionSolc(CallerContextExpression):
 
         if externalCall is None:
             raise ParsingError(f"Try/Catch not correctly parsed by Slither {statement}")
+
+        try_clause = statement["clauses"][0]
+        catch_clauses = statement["clauses"][1:]
+        try_params = try_clause["parameters"]["parameters"] \
+                     if "parameters" in try_clause \
+                     else []
+        new_node = node
+        var_identifiers = []
+        for v in try_params:
+            identifier = {
+                "nodeType": "Identifier",
+                "referencedDeclaration": v["id"],
+                "src": v["src"],
+                "name": v["name"],
+                "typeDescriptions": {"typeString" : v["typeDescriptions"]["typeString"]}
+            }
+            var_identifiers.append(identifier)
+
+            new_statement = {
+                "nodeType": "VariableDeclarationStatement",
+                "src": v["src"],
+                "declarations": [v],
+                "initialValue": None,
+            }
+            new_node = self._parse_variable_definition(new_statement, new_node)
+        tuple_expression = {
+            "nodeType" : "TupleExpression",
+            "src": statement["src"],
+            "components": var_identifiers
+        }
+        assignment = {
+            "nodeType": "Assignment",
+            "src": statement["src"],
+            "operator": "=",
+            "type": "tuple()",
+            "leftHandSide": tuple_expression,
+            "rightHandSide": externalCall,
+            "typeDescriptions": {"typeString": "tuple()"}
+        }
+
         catch_scope = Scope(
-            node.underlying_node.scope.is_checked, False, node.underlying_node.scope
+            new_node.underlying_node.scope.is_checked, False, new_node.underlying_node.scope
         )
-        new_node = self._new_node(NodeType.TRY, statement["src"], catch_scope)
-        new_node.add_unparsed_expression(externalCall)
-        link_underlying_nodes(node, new_node)
-        node = new_node
+        try_catch_node = self._new_node(NodeType.TRY, statement["src"], catch_scope)
+        try_catch_node.add_unparsed_expression(assignment)
+        link_underlying_nodes(new_node, try_catch_node)
 
-        for clause in statement.get("clauses", []):
-            self._parse_catch(clause, node)
-        return node
+        self._parse_catch(try_clause, try_catch_node, True)
 
-    def _parse_catch(self, statement: Dict, node: NodeSolc) -> NodeSolc:
+        for clause in catch_clauses:
+            self._parse_catch(clause, try_catch_node, False)
+        return try_catch_node
+
+
+    def _get_default_initial_value(
+        self,
+        src : str,
+        typename : Union[Literal["bytes"], Literal["string"], Literal["uint"]]
+        ) -> Dict:
+        """
+        Hack: To prevent catch clause parameters from being reported as unused, we assign them to initial values
+        produced by this function. These values are arbitrary and could have been chosen differently.
+
+        :src:      position of a catch clause
+        :typename: the name of the catch clause's parameter type
+        :result:   solc json ast for an arbitrary value of type *typename*, positioned at *src*
+        """
+        if typename == "bytes":
+            return {
+                    "nodeType" : "FunctionCall",
+                    "src": src,
+                    "kind": "functionCall",
+                    "isPure": True,
+                    "isLValue": False,
+                    "isConstant": False,
+                    "typeDescriptions" : { "typeIdentifier": "t_bytes_memory_ptr", "typeString": "bytes memory" },
+                    "arguments": [
+                        {
+                            "nodeType": "Literal",
+                            "src": src,
+                            "kind": "number",
+                            "typeDescriptions": { "typeString": "int_const 0" },
+                            "value": "0"
+                        }
+                    ],
+                    "expression": {
+                        "nodeType": "NewExpression",
+                        "src": src,
+                        "typeName": { "name": "bytes", "nodeType": "ElementaryTypeName" },
+                        "typeDescriptions": {
+                            "typeString": "function (uint256) pure returns (bytes memory)"
+                        },
+                    }
+                }
+        elif typename == "string":
+            return {
+                  "nodeType": "Literal",
+                  "src": src,
+                  "kind": "string",
+                  "value": "",
+                  "typeDescriptions": { "typeString": "literal_string \"\"" }
+            }
+        elif typename == "uint":
+            return {
+                "kind": "number",
+                "nodeType": "Literal",
+                "src": src,
+                "typeDescriptions": { "typeString": "int_const 0" },
+                "value": "0"
+            }
+
+        assert False # unreachable
+
+    def _parse_catch(self, statement: Dict, node: NodeSolc, is_try_clause : bool) -> NodeSolc:
         block = statement.get("block", None)
 
         if block is None:
@@ -690,12 +791,26 @@ class FunctionSolc(CallerContextExpression):
         else:
             params = statement[self.get_children("children")]
 
-        if params:
-            for param in params.get("parameters", []):
-                assert param[self.get_key()] == "VariableDeclaration"
-                self._add_param(param)
+        params = params["parameters"] if params and "parameters" in params else None
 
-        return self._parse_statement(block, try_node, try_scope)
+        if (not is_try_clause) and params:
+            assert (len(params) == 1)
+            parameter = params[0]
+            assert parameter[self.get_key()] == "VariableDeclaration"
+
+            initialValue = self._get_default_initial_value(statement["src"], parameter["typeName"]["name"])
+
+            new_statement = {
+                "nodeType": "VariableDeclarationStatement",
+                "src": parameter["src"],
+                "declarations": [parameter],
+                "initialValue": initialValue,
+            }
+            new_node = self._parse_variable_definition(new_statement, try_node)
+        else:
+            new_node = try_node
+
+        return self._parse_statement(block, new_node, try_scope)
 
     def _parse_variable_definition(self, statement: Dict, node: NodeSolc) -> NodeSolc:
         try:
