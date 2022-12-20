@@ -670,44 +670,47 @@ class FunctionSolc(CallerContextExpression):
                      if "parameters" in try_clause \
                      else []
         new_node = node
-        var_identifiers = []
-        for v in try_params:
-            identifier = {
-                "nodeType": "Identifier",
-                "referencedDeclaration": v["id"],
-                "src": v["src"],
-                "name": v["name"],
-                "typeDescriptions": {"typeString" : v["typeDescriptions"]["typeString"]}
-            }
-            var_identifiers.append(identifier)
+        if len(try_params) > 0:
+            var_identifiers = []
+            for v in try_params:
+                identifier = {
+                    "nodeType": "Identifier",
+                    "referencedDeclaration": v["id"],
+                    "src": v["src"],
+                    "name": v["name"],
+                    "typeDescriptions": {"typeString" : v["typeDescriptions"]["typeString"]}
+                }
+                var_identifiers.append(identifier)
 
-            new_statement = {
-                "nodeType": "VariableDeclarationStatement",
-                "src": v["src"],
-                "declarations": [v],
-                "initialValue": None,
+                new_statement = {
+                    "nodeType": "VariableDeclarationStatement",
+                    "src": v["src"],
+                    "declarations": [v],
+                    "initialValue": None,
+                }
+                new_node = self._parse_variable_definition(new_statement, new_node)
+            tuple_expression = {
+                "nodeType" : "TupleExpression",
+                "src": statement["src"],
+                "components": var_identifiers
             }
-            new_node = self._parse_variable_definition(new_statement, new_node)
-        tuple_expression = {
-            "nodeType" : "TupleExpression",
-            "src": statement["src"],
-            "components": var_identifiers
-        }
-        assignment = {
-            "nodeType": "Assignment",
-            "src": statement["src"],
-            "operator": "=",
-            "type": "tuple()",
-            "leftHandSide": tuple_expression,
-            "rightHandSide": externalCall,
-            "typeDescriptions": {"typeString": "tuple()"}
-        }
+            try_expr = {
+                "nodeType": "Assignment",
+                "src": statement["src"],
+                "operator": "=",
+                "type": "tuple()",
+                "leftHandSide": tuple_expression,
+                "rightHandSide": externalCall,
+                "typeDescriptions": {"typeString": "tuple()"}
+            }
+        else:
+            try_expr = externalCall
 
         catch_scope = Scope(
             new_node.underlying_node.scope.is_checked, False, new_node.underlying_node.scope
         )
         try_catch_node = self._new_node(NodeType.TRY, statement["src"], catch_scope)
-        try_catch_node.add_unparsed_expression(assignment)
+        try_catch_node.add_unparsed_expression(try_expr)
         link_underlying_nodes(new_node, try_catch_node)
 
         self._parse_catch(try_clause, try_catch_node, True)
