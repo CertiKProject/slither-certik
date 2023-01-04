@@ -720,20 +720,21 @@ class FunctionSolc(CallerContextExpression):
         return try_catch_node
 
 
-    def _get_default_initial_value(
+    def _get_unknown_call(
         self,
         src : str,
         typename : Union[Literal["bytes"], Literal["string"], Literal["uint"]]
         ) -> Dict:
         """
-        Hack: To prevent catch clause parameters from being reported as unused, we assign them to initial values
-        produced by this function. These values are arbitrary and could have been chosen differently.
+        Returns an AST for a call to an "unknown value function". Depending on the typename
+        argument, the call will be either certik_unknown_bytes(), certik_unknown_string(), or
+        certik_unknown_uint().
 
-        :src:      position of a catch clause
-        :typename: the name of the catch clause's parameter type
-        :result:   solc json ast for an arbitrary value of type *typename*, positioned at *src*
+        :src:      a source position to locate the AST at
+        :typename: the desired type of the call's return value
+        :result:   solc json ast for a call to certik_unknown_*typename*, positioned at *src*
         """
-        if typename == "bytes":
+        if typename in ["bytes", "string"]:
             return {
                     "nodeType" : "FunctionCall",
                     "src": src,
@@ -741,40 +742,35 @@ class FunctionSolc(CallerContextExpression):
                     "isPure": True,
                     "isLValue": False,
                     "isConstant": False,
-                    "typeDescriptions" : { "typeIdentifier": "t_bytes_memory_ptr", "typeString": "bytes memory" },
-                    "arguments": [
-                        {
-                            "nodeType": "Literal",
-                            "src": src,
-                            "kind": "number",
-                            "typeDescriptions": { "typeString": "int_const 0" },
-                            "value": "0"
-                        }
-                    ],
+                    "typeDescriptions" : { "typeIdentifier": f"t_{typename}_memory_ptr", "typeString": f"{typename} memory" },
+                    "arguments": [],
                     "expression": {
-                        "nodeType": "NewExpression",
+                        "nodeType": "Identifier",
+                        "name": f"certik_unknown_{typename}",
                         "src": src,
-                        "typeName": { "name": "bytes", "nodeType": "ElementaryTypeName" },
                         "typeDescriptions": {
-                            "typeString": "function (uint256) pure returns (bytes memory)"
+                            "typeString": f"function () pure returns ({typename} memory)"
                         },
                     }
                 }
-        elif typename == "string":
-            return {
-                  "nodeType": "Literal",
-                  "src": src,
-                  "kind": "string",
-                  "value": "",
-                  "typeDescriptions": { "typeString": "literal_string \"\"" }
-            }
         elif typename == "uint":
             return {
-                "kind": "number",
-                "nodeType": "Literal",
+                "nodeType" : "FunctionCall",
                 "src": src,
-                "typeDescriptions": { "typeString": "int_const 0" },
-                "value": "0"
+                "kind": "functionCall",
+                "isPure": True,
+                "isLValue": False,
+                "isConstant": False,
+                "typeDescriptions" : { "typeIdentifier": "t_uint_ptr", "typeString": "uint" },
+                "arguments": [],
+                "expression": {
+                    "nodeType": "Identifier",
+                    "name": "certik_unknown_uint",
+                    "src": src,
+                    "typeDescriptions": {
+                        "typeString": "function () pure returns (uint)"
+                    },
+                }
             }
 
         assert False # unreachable
@@ -801,7 +797,7 @@ class FunctionSolc(CallerContextExpression):
             parameter = params[0]
             assert parameter[self.get_key()] == "VariableDeclaration"
 
-            initialValue = self._get_default_initial_value(statement["src"], parameter["typeName"]["name"])
+            initialValue = self._get_unknown_call(statement["src"], parameter["typeName"]["name"])
 
             new_statement = {
                 "nodeType": "VariableDeclarationStatement",
