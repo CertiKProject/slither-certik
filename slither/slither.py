@@ -98,12 +98,12 @@ class Slither(SlitherCore):  # pylint: disable=too-many-instance-attributes
         for compilation_unit in crytic_compile.compilation_units.values():
             compilation_unit_slither = SlitherCompilationUnit(self, compilation_unit)
             self._compilation_units.append(compilation_unit_slither)
-            parser = SlitherCompilationUnitSolc(compilation_unit_slither, False)
+            parser = SlitherCompilationUnitSolc(compilation_unit_slither, generates_certik_ir = False)
             self._parsers.append(parser)
 
             new_compilation_unit_slither = SlitherCompilationUnit(self, compilation_unit)
             self._certik_compilation_units.append(new_compilation_unit_slither)
-            new_parser = SlitherCompilationUnitSolc(new_compilation_unit_slither, True)
+            new_parser = SlitherCompilationUnitSolc(new_compilation_unit_slither, generates_certik_ir = True)
             self._parsers.append(new_parser)
 
             for path, ast in compilation_unit.asts.items():
