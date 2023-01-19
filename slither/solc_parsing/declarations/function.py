@@ -27,6 +27,9 @@ from slither.solc_parsing.yul.parse_yul import YulBlock
 from slither.utils.expression_manipulations import SplitTernaryExpression
 from slither.visitors.expression.export_values import ExportValues
 from slither.visitors.expression.has_conditional import HasConditional
+from slither.core.expressions.assignment_operation import AssignmentOperationType
+from slither.core.expressions.identifier import Identifier
+from slither.solc_parsing.default_values import get_default_value
 
 if TYPE_CHECKING:
     from slither.core.expressions.expression import Expression
@@ -1172,6 +1175,20 @@ class FunctionSolc(CallerContextExpression):
 
         node = self._new_node(NodeType.ENTRYPOINT, cfg["src"], self.underlying_function)
         self._function.entry_point = node.underlying_node
+
+        if self.slither_parser.generates_certik_ir:
+            for ret in self._function.returns:
+                new_node = self._new_node(NodeType.EXPRESSION, cfg["src"], self._function)
+                new_node.underlying_node.add_expression(
+                    AssignmentOperation(
+                        Identifier(ret),
+                        get_default_value(ret.type),
+                        AssignmentOperationType.ASSIGN,
+                        ret.type
+                    )
+                )
+                link_underlying_nodes(node, new_node)
+                node = new_node
 
         if self.is_compact_ast:
             statements = cfg["statements"]
