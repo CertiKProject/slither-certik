@@ -1178,6 +1178,8 @@ class FunctionSolc(CallerContextExpression):
 
         if self.slither_parser.generates_certik_ir:
             for ret in self._function.returns:
+                if not (ret.location in ["memory", "default"]):
+                    continue
                 new_node = self._new_node(NodeType.EXPRESSION, cfg["src"], self._function)
                 new_node.underlying_node.add_expression(
                     AssignmentOperation(
