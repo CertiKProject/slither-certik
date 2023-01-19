@@ -1,4 +1,3 @@
-import copy
 from slither.core.expressions.literal import Literal
 from slither.core.solidity_types.type import Type
 from slither.core.declarations.contract import Contract
@@ -29,14 +28,13 @@ def get_default_value(ty : Type) -> Expression:
         return Literal("false", ElementaryType("bool"))
     elif isinstance(ty, ArrayType) and ty.is_dynamic_array:
         return CallExpression(
-            NewArray(1, copy.deepcopy(ty.type)),
+            NewArray(1, ty.type),
             [Literal("0", ElementaryType("uint256"))],
             f"{ty.type}[] memory"
         )
     elif isinstance(ty, ArrayType) and ty.is_fixed_array:
         length = int(ty.length_value.value)
-        base_init_value = get_default_value(ty.type)
-        return TupleExpression([copy.deepcopy(base_init_value) for _ in range(0, length)])
+        return TupleExpression([get_default_value(ty.type) for _ in range(0, length)])
     elif isinstance(ty, UserDefinedType) and isinstance(ty.type, Enum):
         return MemberAccess(
             "min",
@@ -49,7 +47,7 @@ def get_default_value(ty : Type) -> Expression:
         )
     elif isinstance(ty, UserDefinedType) and isinstance(ty.type, Structure):
         return CallExpression(
-            Identifier(copy.deepcopy(ty.type)),
+            Identifier(ty.type),
             [get_default_value(field.type) for field in ty.type.elems_ordered],
             f"struct {ty.type.name} memory"
         )
