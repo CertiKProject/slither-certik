@@ -7,6 +7,7 @@ from slither.solc_parsing.declarations.caller_context import CallerContextExpres
 from slither.solc_parsing.expressions.expression_parsing import parse_expression
 
 from slither.core.variables.variable import Variable
+from slither.core.variables.local_variable import LocalVariable
 
 from slither.solc_parsing.solidity_types.type_parsing import parse_type, UnknownType
 
@@ -64,8 +65,6 @@ class VariableDeclarationSolc:
         self._initializedNotParsed = None
 
         self._is_compact_ast = False
-        self._from_statement = False
-
         self._reference_id = None
 
         if "nodeType" in variable_data:
@@ -75,7 +74,6 @@ class VariableDeclarationSolc:
                 "VariableDeclarationStatement",
                 "VariableDefinitionStatement",
             ]:
-                self._from_statement = True
                 if len(variable_data["declarations"]) > 1:
                     raise MultipleVariablesDeclaration
                 init = None
@@ -83,7 +81,6 @@ class VariableDeclarationSolc:
                     init = variable_data["initialValue"]
                 self._init_from_declaration(variable_data["declarations"][0], init)
             elif nodeType == "VariableDeclaration":
-                self._from_statement = False
                 self._init_from_declaration(variable_data, variable_data.get("value", None))
             else:
                 raise ParsingError(f"Incorrect variable declaration type {nodeType}")
@@ -95,7 +92,6 @@ class VariableDeclarationSolc:
                 "VariableDeclarationStatement",
                 "VariableDefinitionStatement",
             ]:
-                self._from_statement = True
                 if len(variable_data["children"]) == 2:
                     init = variable_data["children"][1]
                 elif len(variable_data["children"]) == 1:
@@ -109,7 +105,6 @@ class VariableDeclarationSolc:
                 declaration = variable_data["children"][0]
                 self._init_from_declaration(declaration, init)
             elif nodeType == "VariableDeclaration":
-                self._from_statement = False
                 self._init_from_declaration(variable_data, False)
             else:
                 raise ParsingError(f"Incorrect variable declaration type {nodeType}")
@@ -223,7 +218,6 @@ class VariableDeclarationSolc:
                 self._initializedNotParsed = var["children"][1]
 
     def _get_init_value(self, ty : Type) -> Expression:
-
         if isinstance(ty, ElementaryType) and (ty.type in Int + Uint + Byte + ["address"]):
             return Literal("0", ElementaryType(ty.type))
         elif isinstance(ty, ElementaryType) and (ty.type == "string"):
@@ -276,5 +270,9 @@ class VariableDeclarationSolc:
         if self._variable.initialized:
             self._variable.expression = parse_expression(self._initializedNotParsed, caller_context)
             self._initializedNotParsed = None
-        elif self._from_statement and caller_context.slither_parser.generates_certik_ir:
+        elif (
+            isinstance(self._variable, LocalVariable)
+            and self._variable.location in ["memory", "default"]
+            and caller_context.slither_parser.generates_certik_ir
+        ):
             self._variable.expression = self._get_init_value(self._variable.type)
