@@ -800,7 +800,7 @@ class FunctionSolc(CallerContextExpression):
 
         params = params["parameters"] if params and "parameters" in params else None
 
-        if (not is_try_clause) and params:
+        if (not is_try_clause) and params and (params[0]["name"] != ""):
             assert (len(params) == 1)
             parameter = params[0]
             assert parameter[self.get_key()] == "VariableDeclaration"
