@@ -340,7 +340,7 @@ def parse_expression(expression: Dict, caller_context: CallerContextExpression) 
                     for idx, _ in enumerate(elems):
                         if elems[idx] == "":
                             expressions.insert(idx, None)
-        t = TupleExpression(expressions)
+        t = TupleExpression(expressions, is_inline_array=expression.get("isInlineArray", False))
         t.set_offset(src, caller_context.compilation_unit)
         return t
 
