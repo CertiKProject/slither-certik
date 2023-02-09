@@ -232,7 +232,7 @@ class Node(SourceMapping, ChildFunction):  # pylint: disable=too-many-public-met
 
         # Record the continue destination in the STARTLOOP node, so `continue` node can
         # find the correct jump destination.
-        self.continue_destination: Node = None
+        self.continue_destination: Optional[Node] = None
 
     ###################################################################################
     ###################################################################################
