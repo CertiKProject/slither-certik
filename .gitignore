@@ -111,3 +111,6 @@ test_artifacts/
 
 # crytic export 
 crytic-export/
+
+# pipenv related
+Pipfile.lock
