@@ -1332,9 +1332,13 @@ class FunctionSolc(CallerContextExpression):
         else:
             params = params[self.get_children("children")]
 
+        next_unnamed_param_id = 0
         for param in params:
             assert param[self.get_key()] == "VariableDeclaration"
             local_var = self._add_param(param)
+            if self.slither_parser.generates_certik_ir and local_var.underlying_variable.name == "":
+                local_var.underlying_variable.name = f"ANON_IN_{next_unnamed_param_id}"
+                next_unnamed_param_id += 1
             self._function.add_parameters(local_var.underlying_variable)
 
     def _parse_returns(self, returns: Dict):
@@ -1348,9 +1352,13 @@ class FunctionSolc(CallerContextExpression):
         else:
             returns = returns[self.get_children("children")]
 
+        next_unnamed_ret_id = 0
         for ret in returns:
             assert ret[self.get_key()] == "VariableDeclaration"
             local_var = self._add_param(ret)
+            if self.slither_parser.generates_certik_ir and local_var.underlying_variable.name == "":
+                local_var.underlying_variable.name = f"ANON_OUT_{next_unnamed_ret_id}"
+                next_unnamed_ret_id += 1
             self._function.add_return(local_var.underlying_variable)
 
     def _parse_modifier(self, modifier: Dict):
