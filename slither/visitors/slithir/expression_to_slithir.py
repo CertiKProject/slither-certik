@@ -216,22 +216,20 @@ class ExpressionToSlithIR(ExpressionVisitor):
         try:
             const_fold = ConstantFolding(expression, expression.type)
         except (NotConstant, AttributeError):
-            const_fold = None
             return False
-        if const_fold is not None:
-            const_value = const_fold.result()
-            if expression.type in _signed_to_unsigned:
-                new_type = ElementaryType("uint")
-            elif isinstance(const_value.value, bool):
-                new_type = ElementaryType("bool")
-            elif isinstance(const_value.value, int):
-                new_type = ElementaryType("int")
-            else:
-                new_type = ElementaryType("string")
-            cst = Constant(str(const_value.value), new_type)
-            set_val(expression, cst)
-            return True
-        return False
+
+        const_value = const_fold.result()
+        if expression.type in _signed_to_unsigned:
+            new_type = ElementaryType("uint")
+        elif isinstance(const_value.value, bool):
+            new_type = ElementaryType("bool")
+        elif isinstance(const_value.value, int):
+            new_type = ElementaryType("int")
+        else:
+            new_type = ElementaryType("string")
+        cst = Constant(str(const_value.value), new_type)
+        set_val(expression, cst)
+        return True
 
     def _post_binary_operation(self, expression):
         if self._attempt_constant_folding(expression):
