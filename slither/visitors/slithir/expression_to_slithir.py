@@ -219,6 +219,10 @@ class ExpressionToSlithIR(ExpressionVisitor):
             return False
 
         const_value = const_fold.result()
+
+        # Slither's Expression AST doesn't propagate type information.
+        # expression.type holds the kind of binary/unary operation, not the Solidity type.
+        # So, we don't have actual Solidity type here and need to guess the type for the Constant value.
         if expression.type in _signed_to_unsigned:
             new_type = ElementaryType("uint")
         elif isinstance(const_value.value, bool):
