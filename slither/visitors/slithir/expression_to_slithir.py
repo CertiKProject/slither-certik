@@ -236,7 +236,7 @@ class ExpressionToSlithIR(ExpressionVisitor):
         return True
 
     def _post_binary_operation(self, expression):
-        if self._attempt_constant_folding(expression):
+        if self._node.compilation_unit.generates_certik_ir and self._attempt_constant_folding(expression):
             return
 
         left = get(expression.expression_left)
@@ -561,7 +561,7 @@ class ExpressionToSlithIR(ExpressionVisitor):
     def _post_unary_operation(
         self, expression
     ):  # pylint: disable=too-many-branches,too-many-statements
-        if self._attempt_constant_folding(expression):
+        if self._node.compilation_unit.generates_certik_ir and self._attempt_constant_folding(expression):
             return
 
         value = get(expression.expression)
