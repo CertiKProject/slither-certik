@@ -52,6 +52,7 @@ from slither.slithir.variables import (
     TupleVariable,
 )
 from slither.visitors.expression.expression import ExpressionVisitor
+from slither.visitors.expression.constants_folding import ConstantFolding, NotConstant
 
 logger = logging.getLogger("VISTIOR:ExpressionToSlithIR")
 
@@ -211,7 +212,33 @@ class ExpressionToSlithIR(ExpressionVisitor):
                 # a = b = 1;
                 set_val(expression, left)
 
+    def _attempt_constant_folding(self, expression):
+        try:
+            const_fold = ConstantFolding(expression, expression.type)
+        except (NotConstant, AttributeError):
+            return False
+
+        const_value = const_fold.result()
+
+        # Slither's Expression AST doesn't propagate type information.
+        # expression.type holds the kind of binary/unary operation, not the Solidity type.
+        # So, we don't have actual Solidity type here and need to guess the type for the Constant value.
+        if expression.type in _signed_to_unsigned:
+            new_type = ElementaryType("uint")
+        elif isinstance(const_value.value, bool):
+            new_type = ElementaryType("bool")
+        elif isinstance(const_value.value, int):
+            new_type = ElementaryType("int")
+        else:
+            new_type = ElementaryType("string")
+        cst = Constant(str(const_value.value), new_type)
+        set_val(expression, cst)
+        return True
+
     def _post_binary_operation(self, expression):
+        if self._node.compilation_unit.generates_certik_ir and self._attempt_constant_folding(expression):
+            return
+
         left = get(expression.expression_left)
         right = get(expression.expression_right)
         val = TemporaryVariable(self._node)
@@ -534,6 +561,9 @@ class ExpressionToSlithIR(ExpressionVisitor):
     def _post_unary_operation(
         self, expression
     ):  # pylint: disable=too-many-branches,too-many-statements
+        if self._node.compilation_unit.generates_certik_ir and self._attempt_constant_folding(expression):
+            return
+
         value = get(expression.expression)
         if expression.type in [UnaryOperationType.BANG, UnaryOperationType.TILD]:
             lvalue = TemporaryVariable(self._node)

@@ -32,7 +32,7 @@ if TYPE_CHECKING:
 
 # pylint: disable=too-many-instance-attributes,too-many-public-methods
 class SlitherCompilationUnit(Context):
-    def __init__(self, core: "SlitherCore", crytic_compilation_unit: CompilationUnit):
+    def __init__(self, core: "SlitherCore", crytic_compilation_unit: CompilationUnit, generates_certik_ir: bool):
         super().__init__()
 
         self._core = core
@@ -53,6 +53,8 @@ class SlitherCompilationUnit(Context):
         self._all_functions: Set[Function] = set()
         self._all_modifiers: Set[Modifier] = set()
 
+        self._generates_certik_ir = generates_certik_ir
+
         # Memoize
         self._all_state_variables: Optional[Set[StateVariable]] = None
 
@@ -71,6 +73,13 @@ class SlitherCompilationUnit(Context):
     @property
     def core(self) -> "SlitherCore":
         return self._core
+
+    @property
+    def generates_certik_ir(self) -> bool:
+        """
+        Should we generate Certik IR from this compilation unit?
+        """
+        return self._generates_certik_ir
 
     @property
     def source_units(self) -> Dict[int, str]:
