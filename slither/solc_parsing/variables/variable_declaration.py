@@ -157,6 +157,7 @@ class VariableDeclarationSolc:
             attributes = var["attributes"]
             self._typeName = attributes["type"]
 
+        self._src = attributes["src"]
         self._variable.name = attributes["name"]
         # self._arrayDepth = 0
         # self._isMapping = False
@@ -239,3 +240,5 @@ class VariableDeclarationSolc:
             and not isinstance(self._variable.type, FunctionType)
         ):
             self._variable.expression = get_default_value(self._variable.type)
+            self._variable.expression.set_offset(self._src, caller_context.slither_parser.compilation_unit)
+
