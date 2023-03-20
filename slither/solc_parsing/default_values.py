@@ -36,7 +36,10 @@ def get_default_value(ty : Type) -> Expression:
         )
     elif isinstance(ty, ArrayType) and ty.is_fixed_array:
         length = int(ty.length_value.value)
-        return TupleExpression([get_default_value(ty.type) for _ in range(0, length)])
+        return TupleExpression(
+            [get_default_value(ty.type) for _ in range(0, length)],
+            is_inline_array = True
+        )
     elif isinstance(ty, UserDefinedType) and isinstance(ty.type, Enum):
         return MemberAccess(
             "min",
