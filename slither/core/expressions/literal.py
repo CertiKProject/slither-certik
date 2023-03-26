@@ -1,13 +1,32 @@
+import string
 from typing import Optional, Union, TYPE_CHECKING
 
 from slither.core.expressions.expression import Expression
-from slither.core.solidity_types.elementary_type import Fixed, Int, Ufixed, Uint
+from slither.core.solidity_types.elementary_type import Fixed, Int, Ufixed, Uint, ElementaryType
 from slither.utils.arithmetic import convert_subdenomination
 from slither.utils.integer_conversion import convert_string_to_int
 
 if TYPE_CHECKING:
     from slither.core.solidity_types.type import Type
 
+_charToEscape = {
+    "\\": "\\\\",
+    "'": "\\'",
+    "\"": "\\\"",
+    "\n": "\\n",
+    "\r": "\\r",
+    "\t": "\\t",
+}
+
+def formatSolidityString(s):
+    def charToSol(c):
+        if c in _charToEscape.keys():
+            return _charToEscape[c]
+        if c in string.printable:
+            return c
+        return r'\x{0:02x}'.format(ord(c))
+
+    return '"' + ''.join(charToSol(c) for c in s) + '"'
 
 class Literal(Expression):
     def __init__(
@@ -43,6 +62,9 @@ class Literal(Expression):
 
         if self.type in Int + Uint + Fixed + Ufixed + ["address"]:
             return str(convert_string_to_int(self._value))
+
+        if self.type == ElementaryType("string"):
+            return formatSolidityString(self._value)
 
         # be sure to handle any character
         return str(self._value)
