@@ -1,3 +1,4 @@
+
 from slither.core.expressions.literal import Literal
 from slither.core.solidity_types.type import Type
 from slither.core.declarations.contract import Contract
@@ -11,10 +12,10 @@ from slither.core.expressions.member_access import MemberAccess
 from slither.core.expressions.new_array import NewArray
 from slither.core.expressions.tuple_expression import TupleExpression
 from slither.core.expressions.type_conversion import TypeConversion
-from slither.core.solidity_types.array_type import ArrayType
+from slither.core.solidity_types import ArrayType, UserDefinedType, FunctionType, TypeAlias
 from slither.core.solidity_types.elementary_type import Byte, ElementaryType, Int, Uint
-from slither.core.solidity_types.user_defined_type import UserDefinedType
-from slither.core.solidity_types.function_type import FunctionType
+from slither.core.expressions.elementary_type_name_expression import ElementaryTypeNameExpression
+from slither.core.variables.function_type_variable import FunctionTypeVariable
 
 def get_default_value(ty : Type) -> Expression:
     """
@@ -61,4 +62,17 @@ def get_default_value(ty : Type) -> Expression:
             TypeConversion(Literal("0", ElementaryType("uint256")), ElementaryType("address")),
             UserDefinedType(ty.type)
         )
+    elif isinstance(ty, TypeAlias):
+        arg = FunctionTypeVariable()
+        arg.type = ty.type
+
+        ret = FunctionTypeVariable()
+        ret.type = ty
+
+        return CallExpression(
+            MemberAccess("wrap", FunctionType([arg], [ret]), ElementaryTypeNameExpression(ty)),
+            [get_default_value(ty.type)],
+            ty
+        )
+
     assert False # unreachable
