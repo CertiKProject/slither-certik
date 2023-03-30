@@ -296,7 +296,11 @@ class ExpressionToSlithIR(ExpressionVisitor):
             if expression.type_call.startswith("tuple(") and expression.type_call != "tuple()":
                 val = TupleVariable(self._node)
             else:
-                val = TemporaryVariable(self._node)
+                assert len(called.returns) <= 1
+                val = TemporaryVariable(
+                    self._node,
+                    location = called.returns[0].location if len(called.returns) == 1 else None
+                )
             internal_call = InternalCall(called, len(args), val, expression.type_call)
             internal_call.set_expression(expression)
             self._result.append(internal_call)
