@@ -221,12 +221,14 @@ class ExpressionToSlithIR(ExpressionVisitor):
                 operation.set_expression(expression)
                 self._result.append(operation)
                 set_val(expression, left)
-            elif isinstance(left.type, ArrayType):
-                # Special case for init of array, when the right has only one element
-                operation = InitArray([right], left)
-                operation.set_expression(expression)
-                self._result.append(operation)
-                set_val(expression, left)
+            # Disabled https://github.com/crytic/slither/pull/1761 here.
+            # We prefer https://github.com/CertiKProject/slither-certik/pull/26.
+            # elif isinstance(left.type, ArrayType):
+            #     # Special case for init of array, when the right has only one element
+            #     operation = InitArray([right], left)
+            #     operation.set_expression(expression)
+            #     self._result.append(operation)
+            #     set_val(expression, left)
             else:
                 operation = convert_assignment(
                     left, right, expression.type, expression.expression_return_type
