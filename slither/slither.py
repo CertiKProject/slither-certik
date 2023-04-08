@@ -1,6 +1,5 @@
 import logging
-
-from typing import Union, List, ValuesView, Type, Dict
+from typing import Union, List, ValuesView, Type, Dict, Optional
 
 from crytic_compile import CryticCompile, InvalidCompilation
 
@@ -12,6 +11,7 @@ from slither.detectors.abstract_detector import AbstractDetector, DetectorClassi
 from slither.exceptions import SlitherError
 from slither.printers.abstract_printer import AbstractPrinter
 from slither.solc_parsing.slither_compilation_unit_solc import SlitherCompilationUnitSolc
+from slither.utils.output import Output
 
 logger = logging.getLogger("Slither")
 logging.basicConfig()
@@ -49,7 +49,7 @@ def _update_file_scopes(candidates: ValuesView[FileScope]):
 
 
 class Slither(SlitherCore):  # pylint: disable=too-many-instance-attributes
-    def __init__(self, target: Union[str, CryticCompile], **kwargs):
+    def __init__(self, target: Union[str, CryticCompile], **kwargs) -> None:
         """
         Args:
             target (str | CryticCompile)
@@ -91,6 +91,7 @@ class Slither(SlitherCore):  # pylint: disable=too-many-instance-attributes
         self.codex_temperature = kwargs.get("codex_temperature", 0)
         self.codex_max_tokens = kwargs.get("codex_max_tokens", 300)
         self.codex_log = kwargs.get("codex_log", False)
+        self.codex_organization: Optional[str] = kwargs.get("codex_organization", None)
 
         self.no_fail = kwargs.get("no_fail", False)
 
@@ -203,6 +204,16 @@ class Slither(SlitherCore):  # pylint: disable=too-many-instance-attributes
 
 
 
+    def unregister_detector(self, detector_class: Type[AbstractDetector]) -> None:
+        """
+        :param detector_class: Class inheriting from `AbstractDetector`.
+        """
+
+        for obj in self._detectors:
+            if isinstance(obj, detector_class):
+                self._detectors.remove(obj)
+                return
+
     def register_printer(self, printer_class: Type[AbstractPrinter]) -> None:
         """
         :param printer_class: Class inheriting from `AbstractPrinter`.
@@ -211,6 +222,16 @@ class Slither(SlitherCore):  # pylint: disable=too-many-instance-attributes
 
         instance = printer_class(self, logger_printer)
         self._printers.append(instance)
+
+    def unregister_printer(self, printer_class: Type[AbstractPrinter]) -> None:
+        """
+        :param printer_class: Class inheriting from `AbstractPrinter`.
+        """
+
+        for obj in self._printers:
+            if isinstance(obj, printer_class):
+                self._printers.remove(obj)
+                return
 
     def run_detectors(self) -> List[Dict]:
         """
@@ -223,7 +244,7 @@ class Slither(SlitherCore):  # pylint: disable=too-many-instance-attributes
         self.write_results_to_hide()
         return results
 
-    def run_printers(self):
+    def run_printers(self) -> List[Output]:
         """
         :return: List of registered printers outputs.
         """
@@ -231,5 +252,5 @@ class Slither(SlitherCore):  # pylint: disable=too-many-instance-attributes
         return [p.output(self._crytic_compile.target).data for p in self._printers]
 
     @property
-    def triage_mode(self):
+    def triage_mode(self) -> bool:
         return self._triage_mode

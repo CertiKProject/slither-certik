@@ -109,8 +109,11 @@ ENV/
 # Test results
 test_artifacts/
 
-# crytic export 
+# crytic export
 crytic-export/
 
 # pipenv related
 Pipfile.lock
+
+# Auto-generated Github pages docs
+docs/
