@@ -981,6 +981,7 @@ def extract_tmp_call(
                     len(lib_func.parameters),
                     ins.lvalue,
                     "d",
+                    has_receiver_arg=True,
                 )
                 lib_call.set_expression(ins.expression)
                 lib_call.set_node(ins.node)
@@ -1468,6 +1469,7 @@ def look_for_library_or_top_level(
                 ir.nbr_arguments,
                 ir.lvalue,
                 ir.type_call,
+                has_receiver_arg=True,
             )
             lib_call.set_expression(ir.expression)
             lib_call.set_node(ir.node)
