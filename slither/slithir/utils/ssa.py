@@ -1,5 +1,6 @@
 import logging
 from typing import Any, Callable, Dict, List, Tuple, Union
+from slither.slithir.operations.push import Push
 
 import slither.slithir.variables.tuple_ssa
 from slither.core.cfg.node import Node, NodeType
@@ -859,6 +860,10 @@ def copy_ir(ir: Operation, *instances) -> Operation:
         lvalue = get_variable(ir, lambda x: x.lvalue, *instances)
         value = get_variable(ir, lambda x: x.value, *instances)
         return Length(value, lvalue)
+    if isinstance(ir, Push):
+        lvalue = get_variable(ir, lambda x: x.lvalue, *instances)
+        array = get_variable(ir, lambda x: x.array, *instances)
+        return Push(lvalue, array)
 
     raise SlithIRError(f"Impossible ir copy on {ir} ({type(ir)})")
 
