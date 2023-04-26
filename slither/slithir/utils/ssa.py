@@ -863,7 +863,8 @@ def copy_ir(ir: Operation, *instances) -> Operation:
     if isinstance(ir, Push):
         lvalue = get_variable(ir, lambda x: x.lvalue, *instances)
         array = get_variable(ir, lambda x: x.array, *instances)
-        return Push(lvalue, array)
+        elem = get_variable(ir, lambda x:x.elem, *instances)
+        return Push(lvalue, array, elem)
 
     raise SlithIRError(f"Impossible ir copy on {ir} ({type(ir)})")
 

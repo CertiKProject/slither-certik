@@ -36,7 +36,6 @@ from slither.core.solidity_types.elementary_type import (
 from slither.core.solidity_types.type import Type
 from slither.core.solidity_types.type_alias import TypeAliasTopLevel, TypeAlias
 from slither.core.variables.function_type_variable import FunctionTypeVariable
-from slither.core.variables.local_variable import LocalVariable
 from slither.core.variables.state_variable import StateVariable
 from slither.core.variables.variable import Variable
 from slither.slithir.exceptions import SlithIRError
@@ -1336,19 +1335,12 @@ def convert_to_push_set_val(
         ir_assign_value.set_node(ir.node)
         ret.append(ir_assign_value)
     else:
-        if node.function.compilation_unit.generates_certik_ir:
-            ir.lvalue.set_type(new_type)
-            ir_allocate_elem = Push(ir.lvalue, arr)
-            ir_allocate_elem.set_expression(ir.expression)
-            ir_allocate_elem.set_node(ir.node)
-            ret.append(ir_allocate_elem)
-        else:
-            new_element = ir.lvalue
-            new_element.set_type(new_type)
-            ir_assign_value = Assignment(new_element, element_to_add, new_type)
-            ir_assign_value.set_expression(ir.expression)
-            ir_assign_value.set_node(ir.node)
-            ret.append(ir_assign_value)
+        new_element = ir.lvalue
+        new_element.set_type(new_type)
+        ir_assign_value = Assignment(new_element, element_to_add, new_type)
+        ir_assign_value.set_expression(ir.expression)
+        ir_assign_value.set_node(ir.node)
+        ret.append(ir_assign_value)
 
 
 def convert_to_push(
@@ -1375,8 +1367,15 @@ def convert_to_push(
 
     ret = []
 
-    length_val = convert_to_push_expand_arr(ir, node, ret)
-    convert_to_push_set_val(ir, node, length_val, ret)
+    if node.function.compilation_unit.generates_certik_ir:
+        ir.lvalue.set_type(ir.destination.type.type)
+        ir_allocate_elem = Push(ir.lvalue, ir.destination, ir.arguments[0] if len(ir.arguments) > 0 else None)
+        ir_allocate_elem.set_expression(ir.expression)
+        ir_allocate_elem.set_node(ir.node)
+        ret.append(ir_allocate_elem)
+    else:
+        length_val = convert_to_push_expand_arr(ir, node, ret)
+        convert_to_push_set_val(ir, node, length_val, ret)
 
     return ret
 
