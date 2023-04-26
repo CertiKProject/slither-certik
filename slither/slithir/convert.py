@@ -71,6 +71,7 @@ from slither.slithir.operations import (
     Nop,
     Operation,
 )
+from slither.slithir.operations.push import Push
 from slither.slithir.operations.codesize import CodeSize
 from slither.slithir.tmp_operations.argument import Argument, ArgumentType
 from slither.slithir.tmp_operations.tmp_call import TmpCall
@@ -1366,8 +1367,15 @@ def convert_to_push(
 
     ret = []
 
-    length_val = convert_to_push_expand_arr(ir, node, ret)
-    convert_to_push_set_val(ir, node, length_val, ret)
+    if node.function.compilation_unit.generates_certik_ir:
+        ir.lvalue.set_type(ir.destination.type.type)
+        ir_allocate_elem = Push(ir.lvalue, ir.destination, ir.arguments[0] if len(ir.arguments) > 0 else None)
+        ir_allocate_elem.set_expression(ir.expression)
+        ir_allocate_elem.set_node(ir.node)
+        ret.append(ir_allocate_elem)
+    else:
+        length_val = convert_to_push_expand_arr(ir, node, ret)
+        convert_to_push_set_val(ir, node, length_val, ret)
 
     return ret
 
