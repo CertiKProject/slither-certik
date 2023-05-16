@@ -124,13 +124,6 @@ class Variable(SourceMapping):
             self._type = ElementaryType(t)
             return
         assert isinstance(t, (Type, list)) or t is None
-        if isinstance(t, list):
-            t = [
-                ElementaryType(x)
-                if isinstance(x, str)
-                else x
-                for x in t
-            ]
         self._type = t
 
     @property

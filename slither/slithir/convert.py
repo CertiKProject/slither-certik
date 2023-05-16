@@ -1622,7 +1622,7 @@ def _convert_to_structure_to_list(return_type: Type) -> List[Type]:
     # }
     if isinstance(return_type, (MappingType, ArrayType)):
         return []
-    return [return_type.type]
+    return [return_type]
 
 
 def convert_type_of_high_and_internal_level_call(
