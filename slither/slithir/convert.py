@@ -1243,7 +1243,12 @@ def convert_to_solidity_func(
         and len(new_ir.arguments) == 2
         and isinstance(new_ir.arguments[1], list)
     ):
-        types = list(new_ir.arguments[1])
+        def arg_to_type(arg):
+            if isinstance(arg, (Structure, Enum, Contract)):
+                return UserDefinedType(arg)
+            else:
+                return arg
+        types = list(map(arg_to_type, new_ir.arguments[1]))
         new_ir.lvalue.set_type(types)
     # abi.decode where the type to decode is a singleton
     # abi.decode(a, (uint))
