@@ -1622,7 +1622,7 @@ def _convert_to_structure_to_list(return_type: Type) -> List[Type]:
     # }
     elif isinstance(return_type, (MappingType, ArrayType)):
         return []
-    elif isinstance(return_type, ElementaryType):
+    elif isinstance(return_type, (ElementaryType, UserDefinedType, TypeAlias)):
         return [return_type]
     else:
         assert False
