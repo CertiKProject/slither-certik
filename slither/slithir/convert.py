@@ -1413,7 +1413,15 @@ def convert_to_pop(ir, node):
     element_to_delete = ReferenceVariable(node)
     ir_assign_element_to_delete = Index(element_to_delete, arr, val, ElementaryType("uint256"))
     ir_length.lvalue.points_to = arr
-    element_to_delete.set_type(ElementaryType("uint256"))
+    # Note bytes is an ElementaryType not ArrayType so in that case we use ElementaryType("bytes1")
+    # while in other cases such as uint256[] (ArrayType) we use ir.destination.type.type
+    # in this way we will have the type always set to the corresponding ElementaryType
+    assert isinstance(ir.destination.type, (ElementaryType, ArrayType))
+    element_to_delete.set_type(
+        ElementaryType("bytes1")
+        if isinstance(ir.destination.type, ElementaryType)
+        else ir.destination.type.type
+    )
     ir_assign_element_to_delete.set_expression(ir.expression)
     ir_assign_element_to_delete.set_node(ir.node)
     ret.append(ir_assign_element_to_delete)
