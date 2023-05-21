@@ -400,6 +400,74 @@ def integrate_value_gas(result: List[Operation]) -> List[Operation]:
 ###################################################################################
 ###################################################################################
 
+def get_declared_param_names(ins: Call) -> Optional[List[str]]:
+    """
+    Given a call operation, return the list of parameter names, in the order
+    listed in the function declaration.
+
+    #### Parameters
+    ins -
+        The call instruction
+
+    #### Possible Returns
+    List[str] -
+        A list of the parameters in declaration order
+    None -
+        Workaround: Unable to obtain list of parameters in declaration order
+    """
+    if isinstance(ins, NewStructure):
+        return [x.name for x in ins.structure.elems_ordered if not isinstance(x.type, MappingType)]
+    elif isinstance(ins, NewContract):
+        return [p.name for p in ins.contract.constructor.parameters]
+    elif isinstance(ins, (LowLevelCall, NewElementaryType, NewArray)):
+        # named arguments are incompatible with these call forms
+        assert False
+    elif isinstance(ins, HighLevelCall) and isinstance(ins.function, str):
+        # look up
+        ins.contract
+    elif isinstance(ins, (InternalCall, LibraryCall, HighLevelCall)):
+        if isinstance(ins.function, Function):
+            return [p.name for p in ins.function.parameters]
+        else:
+            return None
+    elif isinstance(ins, InternalDynamicCall):
+        return [p.name for p in ins.function_type.params]
+    elif isinstance(ins, EventCall):
+        return None
+    else:
+        assert False
+
+def reorder_arguments(args: List[Variable], call_names: List[str], decl_names: List[str]) -> List[Variable]:
+    """
+    Reorder named struct constructor arguments so that they match struct declaration ordering rather
+    than call ordering
+
+    E.g. for `struct S { int x; int y; }` we reorder `S({y : 2, x : 3})` to `S(3, 2)`
+    #### Parameters
+    args -
+        Arguments to constructor call, in call order
+    names -
+        Parameter names in call order
+    decl_names -
+        Parameter names in declaration order
+
+    #### Returns
+    Reordered arguments to constructor call, now in declaration order
+    """
+    if not len(args) == len(call_names):
+        pdb.set_trace()
+    assert isinstance(args, list)
+    assert isinstance(call_names, list)
+    assert isinstance(decl_names, list)
+    assert len(args) == len(call_names)
+    assert len(call_names) == len(decl_names)
+
+    args_ret = []
+    for n in decl_names:
+        ind = call_names.index(n)
+        args_ret.append(args[ind])
+
+    return args_ret
 
 def propagate_type_and_convert_call(result: List[Operation], node: "Node") -> List[Operation]:
     """
@@ -449,6 +517,11 @@ def propagate_type_and_convert_call(result: List[Operation], node: "Node") -> Li
                 ins.call_value = calls_value[ins.call_id]
             if ins.call_id in calls_gas:
                 ins.call_gas = calls_gas[ins.call_id]
+
+        if isinstance(ins, Call) and (ins.names != None):
+            decl_param_names = get_declared_param_names(ins)
+            if decl_param_names != None:
+                call_data = reorder_arguments(call_data, ins.names, decl_param_names)
 
         if isinstance(ins, (Call, NewContract, NewStructure)):
             # We might have stored some arguments for libraries
@@ -883,7 +956,7 @@ def extract_tmp_call(
         if isinstance(ins.ori.variable_left, Contract):
             st = ins.ori.variable_left.get_structure_from_name(ins.ori.variable_right)
             if st:
-                op = NewStructure(st, ins.lvalue)
+                op = NewStructure(st, ins.lvalue, names=ins.names)
                 op.set_expression(ins.expression)
                 op.call_id = ins.call_id
                 return op
@@ -921,6 +994,7 @@ def extract_tmp_call(
                 ins.nbr_arguments,
                 ins.lvalue,
                 ins.type_call,
+                names=ins.names
             )
             custom_error_sym = resolve_error(str(ins.ori.variable_right), ins.ori.variable_left)
             if custom_error_sym is not None:
@@ -983,6 +1057,7 @@ def extract_tmp_call(
                     ins.lvalue,
                     "d",
                     has_receiver_arg=True,
+                    names=ins.names
                 )
                 lib_call.set_expression(ins.expression)
                 lib_call.set_node(ins.node)
@@ -1064,6 +1139,7 @@ def extract_tmp_call(
             ins.nbr_arguments,
             ins.lvalue,
             ins.type_call,
+            names = ins.names
         )
         msgcall.call_id = ins.call_id
 
@@ -1115,7 +1191,7 @@ def extract_tmp_call(
         return n
 
     if isinstance(ins.called, Structure):
-        op = NewStructure(ins.called, ins.lvalue)
+        op = NewStructure(ins.called, ins.lvalue, names=ins.names)
         op.set_expression(ins.expression)
         op.call_id = ins.call_id
         op.set_expression(ins.expression)
@@ -1139,7 +1215,7 @@ def extract_tmp_call(
         if len(ins.called.constructor.parameters) != ins.nbr_arguments:
             return Nop()
         internalcall = InternalCall(
-            ins.called.constructor, ins.nbr_arguments, ins.lvalue, ins.type_call
+            ins.called.constructor, ins.nbr_arguments, ins.lvalue, ins.type_call, ins.names
         )
         internalcall.call_id = ins.call_id
         internalcall.set_expression(ins.expression)
@@ -1465,7 +1541,7 @@ def look_for_library_or_top_level(
                 len(destination.parameters) == len(arguments)
                 and _find_function_from_parameter(arguments, [destination], True) is not None
             ):
-                internalcall = InternalCall(destination, ir.nbr_arguments, ir.lvalue, ir.type_call)
+                internalcall = InternalCall(destination, ir.nbr_arguments, ir.lvalue, ir.type_call, names=ir.names)
                 internalcall.set_expression(ir.expression)
                 internalcall.set_node(ir.node)
                 internalcall.arguments = [ir.destination] + ir.arguments
@@ -1491,6 +1567,7 @@ def look_for_library_or_top_level(
                 ir.lvalue,
                 ir.type_call,
                 has_receiver_arg=True,
+                names=ir.names
             )
             lib_call.set_expression(ir.expression)
             lib_call.set_node(ir.node)

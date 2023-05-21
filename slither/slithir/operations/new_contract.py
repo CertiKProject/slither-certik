@@ -10,11 +10,14 @@ from slither.core.declarations.function_contract import FunctionContract
 
 class NewContract(Call, OperationWithLValue):  # pylint: disable=too-many-instance-attributes
     def __init__(
-        self, contract_name: Constant, lvalue: Union[TemporaryVariableSSA, TemporaryVariable]
+        self,
+        contract_name: Constant,
+        lvalue: Union[TemporaryVariableSSA, TemporaryVariable],
+        names: Optional[List[str]] = None
     ) -> None:
         assert isinstance(contract_name, Constant)
         assert is_valid_lvalue(lvalue)
-        super().__init__()
+        super().__init__(names=names)
         self._contract_name = contract_name
         # todo create analyze to add the contract instance
         self._lvalue = lvalue

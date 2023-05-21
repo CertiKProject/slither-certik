@@ -4,9 +4,15 @@ from slither.slithir.operations.operation import Operation
 
 
 class Call(Operation):
-    def __init__(self) -> None:
+    def __init__(self, names : Optional[List[str]] = None) -> None:
         super().__init__()
+        assert (names == None) or isinstance(names, list)
         self._arguments = []
+        self._names = names
+
+    @property
+    def names(self) -> Optional[List[str]]:
+        return self._names
 
     @property
     def arguments(self):

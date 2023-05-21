@@ -1,4 +1,4 @@
-from typing import List, Union
+from typing import List, Optional, Union
 
 from slither.slithir.operations.call import Call
 from slither.slithir.operations.lvalue import OperationWithLValue
@@ -14,14 +14,15 @@ from slither.slithir.variables.temporary_ssa import TemporaryVariableSSA
 
 class NewStructure(Call, OperationWithLValue):
     def __init__(
-        self, structure: StructureContract, lvalue: Union[TemporaryVariableSSA, TemporaryVariable]
+        self, structure: StructureContract, lvalue: Union[TemporaryVariableSSA, TemporaryVariable], names: Optional[List[str]]
     ) -> None:
-        super().__init__()
+        super().__init__(names = names)
         assert isinstance(structure, Structure)
         assert is_valid_lvalue(lvalue)
         self._structure = structure
         # todo create analyze to add the contract instance
         self._lvalue = lvalue
+        self._names = names
 
     @property
     def read(self) -> List[Union[TemporaryVariableSSA, TemporaryVariable, Constant]]:

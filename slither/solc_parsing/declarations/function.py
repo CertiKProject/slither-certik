@@ -794,6 +794,7 @@ class FunctionSolc(CallerContextExpression):
                     "isConstant": False,
                     "typeDescriptions" : { "typeIdentifier": f"t_{typename}_memory_ptr", "typeString": f"{typename} memory" },
                     "arguments": [],
+                    "names": [],
                     "expression": {
                         "nodeType": "Identifier",
                         "name": f"certik_unknown_{typename}",
@@ -813,6 +814,7 @@ class FunctionSolc(CallerContextExpression):
                 "isConstant": False,
                 "typeDescriptions" : { "typeIdentifier": "t_uint_ptr", "typeString": "uint" },
                 "arguments": [],
+                "names": [],
                 "expression": {
                     "nodeType": "Identifier",
                     "name": "certik_unknown_uint",
