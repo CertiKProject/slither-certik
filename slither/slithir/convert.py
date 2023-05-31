@@ -423,8 +423,7 @@ def get_declared_param_names(ins: Call) -> Optional[List[str]]:
         # named arguments are incompatible with these call forms
         assert False
     elif isinstance(ins, HighLevelCall) and isinstance(ins.function, str):
-        # look up
-        ins.contract
+        return None
     elif isinstance(ins, (InternalCall, LibraryCall, HighLevelCall)):
         if isinstance(ins.function, Function):
             return [p.name for p in ins.function.parameters]
@@ -454,8 +453,6 @@ def reorder_arguments(args: List[Variable], call_names: List[str], decl_names: L
     #### Returns
     Reordered arguments to constructor call, now in declaration order
     """
-    if not len(args) == len(call_names):
-        pdb.set_trace()
     assert isinstance(args, list)
     assert isinstance(call_names, list)
     assert isinstance(decl_names, list)
