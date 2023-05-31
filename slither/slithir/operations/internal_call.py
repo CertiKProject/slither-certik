@@ -20,8 +20,9 @@ class InternalCall(Call, OperationWithLValue):  # pylint: disable=too-many-insta
             Union[TupleVariableSSA, TemporaryVariableSSA, TupleVariable, TemporaryVariable]
         ],
         type_call: str,
+        names: Optional[List[str]] = None
     ) -> None:
-        super().__init__()
+        super().__init__(names=names)
         self._contract_name = ""
         if isinstance(function, Function):
             self._function = function

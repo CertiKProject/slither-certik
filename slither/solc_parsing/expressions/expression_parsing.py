@@ -170,16 +170,18 @@ def parse_call(
         arguments = []
         if expression["arguments"]:
             arguments = [parse_expression(a, caller_context) for a in expression["arguments"]]
+        names = expression["names"] if len(expression["names"]) > 0 else None
     else:
         children = expression["children"]
         called = parse_expression(children[0], caller_context)
         arguments = [parse_expression(a, caller_context) for a in children[1::]]
+        names = expression["names"] if len(expression["names"]) > 0 else None
 
     if isinstance(called, SuperCallExpression):
         sp = SuperCallExpression(called, arguments, type_return)
         sp.set_offset(expression["src"], caller_context.compilation_unit)
         return sp
-    call_expression = CallExpression(called, arguments, type_return)
+    call_expression = CallExpression(called, arguments, type_return, names=names)
     call_expression.set_offset(src, caller_context.compilation_unit)
 
     # Only available if the syntax {gas:, value:} was used

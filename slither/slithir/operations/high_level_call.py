@@ -28,14 +28,16 @@ class HighLevelCall(Call, OperationWithLValue):
         result: Optional[Union[TemporaryVariable, TupleVariable, TemporaryVariableSSA]],
         type_call: str,
         has_receiver_arg: bool = False,
+        names: Optional[List[str]] = None
     ) -> None:
         """
         - has_receiver_arg: True if the receiver expression is used as the first argument
+        - names: For calls of the form f({argName1 : arg1, ...}), the names of parameters listed in call order
         """
         assert isinstance(function_name, Constant)
         assert is_valid_lvalue(result) or result is None
         self._check_destination(destination)
-        super().__init__()
+        super().__init__(names=names)
         self._destination = destination
         self._function_name = function_name
         self._nbr_arguments = nbr_arguments
