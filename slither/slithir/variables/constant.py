@@ -2,9 +2,11 @@ from functools import total_ordering
 from typing import Optional, Union
 
 from slither.core.solidity_types.elementary_type import ElementaryType, Int, Uint
+from slither.core.solidity_types import Type, UserDefinedType
 from slither.slithir.variables.variable import SlithIRVariable
 from slither.utils.arithmetic import convert_subdenomination
 from slither.utils.integer_conversion import convert_string_to_int
+from slither.core.declarations.enum import Enum
 
 
 @total_ordering
@@ -12,7 +14,7 @@ class Constant(SlithIRVariable):
     def __init__(
         self,
         val: Union[int, str],
-        constant_type: Optional[ElementaryType] = None,
+        constant_type: Optional[Type] = None,
         subdenomination: Optional[str] = None,
     ) -> None:  # pylint: disable=too-many-branches
         super().__init__()
@@ -25,14 +27,17 @@ class Constant(SlithIRVariable):
             val = str(convert_subdenomination(val, subdenomination))
 
         if constant_type:  # pylint: disable=too-many-nested-blocks
-            assert isinstance(constant_type, ElementaryType)
             self._type = constant_type
-            if constant_type.type in Int + Uint + ["address"]:
+            if isinstance(constant_type, ElementaryType) and constant_type.type in Int + Uint + ["address"]:
                 self._val = convert_string_to_int(val)
-            elif constant_type.type == "bool":
+            elif isinstance(constant_type, ElementaryType) and constant_type.type == "bool":
                 self._val = (val == "true") | (val == "True")
-            else:
+            elif isinstance(constant_type, ElementaryType):
                 self._val = val
+            elif isinstance(constant_type, UserDefinedType) and isinstance(constant_type.type, Enum):
+                self._val = val
+            else:
+                assert False
         else:
             if val.isdigit():
                 self._type = ElementaryType("uint256")
