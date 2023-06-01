@@ -63,6 +63,7 @@ from slither.slithir.variables import (
 )
 from slither.visitors.expression.expression import ExpressionVisitor
 from slither.visitors.expression.constants_folding import ConstantFolding, NotConstant
+from slither.core.solidity_types.user_defined_type import UserDefinedType
 
 if TYPE_CHECKING:
     from slither.core.cfg.node import Node
@@ -465,25 +466,27 @@ class ExpressionToSlithIR(ExpressionVisitor):
                     type_expression_found = expression.expression.arguments[0]
                     if isinstance(type_expression_found, ElementaryTypeNameExpression):
                         type_found = type_expression_found.type
-                        constant_type = type_found
+                        assert isinstance(type_found, ElementaryType)
+                        const_val = (
+                            str(type_found.min) if expression.member_name == "min"
+                            else str(type_found.max)
+                        )
+                        rhs = Constant(const_val, type_found)
                     else:
                         # type(enum).max/min
                         assert isinstance(type_expression_found, Identifier)
-                        type_found = type_expression_found.value
-                        assert isinstance(type_found, Enum)
-                        constant_type = None
-                    if expression.member_name == "min":
-                        op = Assignment(
-                            val,
-                            Constant(str(type_found.min), constant_type),
-                            type_found,
+                        enum_found = type_expression_found.value
+                        assert isinstance(enum_found, Enum)
+                        const_val = (
+                            str(enum_found.min) if expression.member_name == "min"
+                            else str(enum_found.max)
                         )
-                    else:
-                        op = Assignment(
-                            val,
-                            Constant(str(type_found.max), constant_type),
-                            type_found,
-                        )
+                        rhs = Constant(const_val, UserDefinedType(enum_found))
+                    op = Assignment(
+                        val,
+                        rhs,
+                        rhs.type,
+                    )
                     self._result.append(op)
                     set_val(expression, val)
                     return
