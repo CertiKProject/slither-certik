@@ -64,6 +64,7 @@ from slither.slithir.variables import (
 from slither.visitors.expression.expression import ExpressionVisitor
 from slither.visitors.expression.constants_folding import ConstantFolding, NotConstant
 from slither.core.solidity_types.user_defined_type import UserDefinedType
+from slither.core.declarations.structure import Structure
 
 if TYPE_CHECKING:
     from slither.core.cfg.node import Node
@@ -316,12 +317,15 @@ class ExpressionToSlithIR(ExpressionVisitor):
             # If tuple
             if expression.type_call.startswith("tuple(") and expression.type_call != "tuple()":
                 val = TupleVariable(self._node)
+                val.set_type(list(map(lambda x: x.type, called.returns)))
             else:
                 assert len(called.returns) <= 1
                 val = TemporaryVariable(
                     self._node,
                     location = called.returns[0].location if len(called.returns) == 1 else None
                 )
+                if len(called.returns) == 1:
+                    val.set_type(called.returns[0].type)
             internal_call = InternalCall(called, len(args), val, expression.type_call, names=expression.names)
             internal_call.set_expression(expression)
             self._result.append(internal_call)
@@ -531,6 +535,8 @@ class ExpressionToSlithIR(ExpressionVisitor):
                 return
 
         val = ReferenceVariable(self._node)
+        if isinstance(expr, Variable) and isinstance(expr.type, UserDefinedType) and isinstance(expr.type.type, Structure):
+            val.set_type(expr.type.type.elems[expression.member_name].type)
         member = Member(expr, Constant(expression.member_name), val)
         member.set_expression(expression)
         self._result.append(member)
