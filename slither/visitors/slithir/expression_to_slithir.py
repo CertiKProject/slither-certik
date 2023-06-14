@@ -535,7 +535,12 @@ class ExpressionToSlithIR(ExpressionVisitor):
                 return
 
         val = ReferenceVariable(self._node)
-        if isinstance(expr, Variable) and isinstance(expr.type, UserDefinedType) and isinstance(expr.type.type, Structure):
+        if (
+            isinstance(expr, Variable)
+            and isinstance(expr.type, UserDefinedType)
+            and isinstance(expr.type.type, Structure)
+            and expression.member_name in expr.type.type.elems
+        ):
             val.set_type(expr.type.type.elems[expression.member_name].type)
         member = Member(expr, Constant(expression.member_name), val)
         member.set_expression(expression)
