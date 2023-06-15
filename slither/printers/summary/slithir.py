@@ -4,7 +4,6 @@
 from slither.core.declarations import Function
 from slither.printers.abstract_printer import AbstractPrinter
 from typing import List
-from slither.core.compilation_unit import SlitherCompilationUnit
 
 def _print_function(function: Function) -> str:
     txt = ""
@@ -26,13 +25,6 @@ class PrinterSlithIR(AbstractPrinter):
     HELP = "Print the slithIR representation of the functions"
 
     WIKI = "https://github.com/trailofbits/slither/wiki/Printer-documentation#slithir"
-
-    @property
-    def compilation_units(self) -> List[SlitherCompilationUnit]:
-        """
-        List of compilation units to print the IR for
-        """
-        return self.slither.compilation_units
 
     def output(self, _filename):
         """

@@ -37,3 +37,12 @@ class CFG(AbstractPrinter):
         for filename_result, content in all_files:
             res.add_file(filename_result, content)
         return res
+
+
+class PrinterCertiKCFG(CFG):
+    ARGUMENT = "certik-cfg"
+    HELP = "Print the Certik CFG representation of the functions"
+
+    @staticmethod
+    def uses_certik_ir() -> bool:
+        return True

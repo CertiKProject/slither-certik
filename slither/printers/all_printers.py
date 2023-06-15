@@ -9,7 +9,7 @@ from .summary.certikir import PrinterCertiKIR
 from .summary.slithir import PrinterSlithIR
 from .summary.slithir_ssa import PrinterSlithIRSSA
 from .summary.human_summary import PrinterHumanSummary
-from .functions.cfg import CFG
+from .functions.cfg import CFG, PrinterCertiKCFG
 from .summary.function_ids import FunctionIds
 from .summary.variable_order import VariableOrder
 from .summary.data_depenency import DataDependency

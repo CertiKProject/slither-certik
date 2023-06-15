@@ -22,9 +22,9 @@ class AbstractPrinter(metaclass=abc.ABCMeta):
 
     def __init__(self, slither: "Slither", logger: Logger) -> None:
         self.slither = slither
-        self.contracts = slither.contracts
         self.filename = slither.filename
         self.logger = logger
+        self._contracts = None
 
         if not self.HELP:
             raise IncorrectPrinterInitialization(
@@ -40,6 +40,30 @@ class AbstractPrinter(metaclass=abc.ABCMeta):
             raise IncorrectPrinterInitialization(
                 f"WIKI is not initialized {self.__class__.__name__}"
             )
+
+    @staticmethod
+    def uses_certik_ir() -> bool:
+        """
+        Does this detector expect the CertiK version of SlithIR?
+        """
+        return False
+
+    @property
+    def compilation_units(self):
+        if type(self).uses_certik_ir():
+            return self.slither.certik_compilation_units
+        else:
+            return self.slither.compilation_units
+
+    @property
+    def contracts(self):
+        if not self._contracts:
+            all_contracts = [
+                compilation_unit.contracts for compilation_unit in self.compilation_units
+            ]
+            self._contracts = [item for sublist in all_contracts for item in sublist]
+
+        return self._contracts
 
     def info(self, info: str) -> None:
         if self.logger:
