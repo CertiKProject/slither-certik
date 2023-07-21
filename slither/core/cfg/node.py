@@ -5,8 +5,7 @@ from enum import Enum
 from typing import Optional, List, Set, Dict, Tuple, Union, TYPE_CHECKING
 
 from slither.all_exceptions import SlitherException
-from slither.core.children.child_function import ChildFunction
-from slither.core.declarations import Contract, Function
+from slither.core.declarations import Contract, Function, FunctionContract
 from slither.core.declarations.solidity_variables import (
     SolidityVariable,
     SolidityFunction,
@@ -33,6 +32,7 @@ from slither.slithir.operations import (
     Return,
     Operation,
 )
+from slither.slithir.utils.utils import RVALUE
 from slither.slithir.variables import (
     Constant,
     LocalIRVariable,
@@ -106,7 +106,7 @@ class NodeType(Enum):
 
 # I am not sure why, but pylint reports a lot of "no-member" issue that are not real (Josselin)
 # pylint: disable=no-member
-class Node(SourceMapping, ChildFunction):  # pylint: disable=too-many-public-methods
+class Node(SourceMapping):  # pylint: disable=too-many-public-methods
     """
     Node class
 
@@ -146,12 +146,12 @@ class Node(SourceMapping, ChildFunction):  # pylint: disable=too-many-public-met
         self._node_id: int = node_id
 
         self._vars_written: List[Variable] = []
-        self._vars_read: List[Variable] = []
+        self._vars_read: List[Union[Variable, SolidityVariable]] = []
 
         self._ssa_vars_written: List["SlithIRVariable"] = []
         self._ssa_vars_read: List["SlithIRVariable"] = []
 
-        self._internal_calls: List["Function"] = []
+        self._internal_calls: List[Union["Function", "SolidityFunction"]] = []
         self._solidity_calls: List[SolidityFunction] = []
         self._high_level_calls: List["HighLevelCallType"] = []  # contains library calls
         self._library_calls: List["LibraryCallType"] = []
@@ -172,7 +172,9 @@ class Node(SourceMapping, ChildFunction):  # pylint: disable=too-many-public-met
         self._local_vars_read: List[LocalVariable] = []
         self._local_vars_written: List[LocalVariable] = []
 
-        self._slithir_vars: Set["SlithIRVariable"] = set()  # non SSA
+        self._slithir_vars: Set[
+            Union["SlithIRVariable", ReferenceVariable, TemporaryVariable, TupleVariable]
+        ] = set()  # non SSA
 
         self._ssa_local_vars_read: List[LocalIRVariable] = []
         self._ssa_local_vars_written: List[LocalIRVariable] = []
@@ -189,6 +191,7 @@ class Node(SourceMapping, ChildFunction):  # pylint: disable=too-many-public-met
 
         self.scope: Union["Scope", "Function"] = scope
         self.file_scope: "FileScope" = file_scope
+        self._function: Optional["Function"] = None
 
         # Record the continue destination in the STARTLOOP node, so `continue` node can
         # find the correct jump destination.
@@ -217,7 +220,7 @@ class Node(SourceMapping, ChildFunction):  # pylint: disable=too-many-public-met
         return self._node_type
 
     @type.setter
-    def type(self, new_type: NodeType):
+    def type(self, new_type: NodeType) -> None:
         self._node_type = new_type
 
     @property
@@ -228,6 +231,13 @@ class Node(SourceMapping, ChildFunction):  # pylint: disable=too-many-public-met
                     return True
         return False
 
+    def set_function(self, function: "Function") -> None:
+        self._function = function
+
+    @property
+    def function(self) -> "Function":
+        return self._function
+
     # endregion
     ###################################################################################
     ###################################################################################
@@ -236,7 +246,7 @@ class Node(SourceMapping, ChildFunction):  # pylint: disable=too-many-public-met
     ###################################################################################
 
     @property
-    def variables_read(self) -> List[Variable]:
+    def variables_read(self) -> List[Union[Variable, SolidityVariable]]:
         """
         list(Variable): Variables read (local/state/solidity)
         """
@@ -289,11 +299,13 @@ class Node(SourceMapping, ChildFunction):  # pylint: disable=too-many-public-met
         return self._expression_vars_read
 
     @variables_read_as_expression.setter
-    def variables_read_as_expression(self, exprs: List[Expression]):
+    def variables_read_as_expression(self, exprs: List[Expression]) -> None:
         self._expression_vars_read = exprs
 
     @property
-    def slithir_variables(self) -> List["SlithIRVariable"]:
+    def slithir_variables(
+        self,
+    ) -> List[Union["SlithIRVariable", ReferenceVariable, TemporaryVariable, TupleVariable]]:
         return list(self._slithir_vars)
 
     @property
@@ -343,7 +355,7 @@ class Node(SourceMapping, ChildFunction):  # pylint: disable=too-many-public-met
         return self._expression_vars_written
 
     @variables_written_as_expression.setter
-    def variables_written_as_expression(self, exprs: List[Expression]):
+    def variables_written_as_expression(self, exprs: List[Expression]) -> None:
         self._expression_vars_written = exprs
 
     # endregion
@@ -403,7 +415,7 @@ class Node(SourceMapping, ChildFunction):  # pylint: disable=too-many-public-met
         return self._external_calls_as_expressions
 
     @external_calls_as_expressions.setter
-    def external_calls_as_expressions(self, exprs: List[Expression]):
+    def external_calls_as_expressions(self, exprs: List[Expression]) -> None:
         self._external_calls_as_expressions = exprs
 
     @property
@@ -414,7 +426,7 @@ class Node(SourceMapping, ChildFunction):  # pylint: disable=too-many-public-met
         return self._internal_calls_as_expressions
 
     @internal_calls_as_expressions.setter
-    def internal_calls_as_expressions(self, exprs: List[Expression]):
+    def internal_calls_as_expressions(self, exprs: List[Expression]) -> None:
         self._internal_calls_as_expressions = exprs
 
     @property
@@ -422,10 +434,10 @@ class Node(SourceMapping, ChildFunction):  # pylint: disable=too-many-public-met
         return list(self._expression_calls)
 
     @calls_as_expression.setter
-    def calls_as_expression(self, exprs: List[Expression]):
+    def calls_as_expression(self, exprs: List[Expression]) -> None:
         self._expression_calls = exprs
 
-    def can_reenter(self, callstack=None) -> bool:
+    def can_reenter(self, callstack: Optional[List[Union[Function, Variable]]] = None) -> bool:
         """
         Check if the node can re-enter
         Do not consider CREATE as potential re-enter, but check if the
@@ -571,7 +583,7 @@ class Node(SourceMapping, ChildFunction):  # pylint: disable=too-many-public-met
         """
         self._fathers.append(father)
 
-    def set_fathers(self, fathers: List["Node"]):
+    def set_fathers(self, fathers: List["Node"]) -> None:
         """Set the father nodes
 
         Args:
@@ -611,6 +623,21 @@ class Node(SourceMapping, ChildFunction):  # pylint: disable=too-many-public-met
             son: son to add
         """
         self._sons.append(son)
+
+    def replace_son(self, ori_son: "Node", new_son: "Node") -> None:
+        """Replace a son node. Do nothing if the node to replace is not a son
+
+        Args:
+            ori_son: son to replace
+            new_son: son to replace with
+        """
+        for i, s in enumerate(self._sons):
+            if s.node_id == ori_son.node_id:
+                idx = i
+                break
+        else:
+            return
+        self._sons[idx] = new_son
 
     def set_sons(self, sons: List["Node"]) -> None:
         """Set the son nodes
@@ -667,20 +694,20 @@ class Node(SourceMapping, ChildFunction):  # pylint: disable=too-many-public-met
         return self._irs_ssa
 
     @irs_ssa.setter
-    def irs_ssa(self, irs):
+    def irs_ssa(self, irs: List[Operation]) -> None:
         self._irs_ssa = irs
 
     def add_ssa_ir(self, ir: Operation) -> None:
         """
         Use to place phi operation
         """
-        ir.set_node(self)
+        ir.set_node(self)  # type: ignore
         self._irs_ssa.append(ir)
 
     def slithir_generation(self) -> None:
         if self.expression:
             expression = self.expression
-            self._irs = convert_expression(expression, self)
+            self._irs = convert_expression(expression, self)  # type:ignore
 
         self._find_read_write_call()
 
@@ -717,7 +744,7 @@ class Node(SourceMapping, ChildFunction):  # pylint: disable=too-many-public-met
         return self._dominators
 
     @dominators.setter
-    def dominators(self, dom: Set["Node"]):
+    def dominators(self, dom: Set["Node"]) -> None:
         self._dominators = dom
 
     @property
@@ -729,7 +756,7 @@ class Node(SourceMapping, ChildFunction):  # pylint: disable=too-many-public-met
         return self._immediate_dominator
 
     @immediate_dominator.setter
-    def immediate_dominator(self, idom: "Node"):
+    def immediate_dominator(self, idom: "Node") -> None:
         self._immediate_dominator = idom
 
     @property
@@ -741,7 +768,7 @@ class Node(SourceMapping, ChildFunction):  # pylint: disable=too-many-public-met
         return self._dominance_frontier
 
     @dominance_frontier.setter
-    def dominance_frontier(self, doms: Set["Node"]):
+    def dominance_frontier(self, doms: Set["Node"]) -> None:
         """
         Returns:
             set(Node)
@@ -793,6 +820,7 @@ class Node(SourceMapping, ChildFunction):  # pylint: disable=too-many-public-met
 
     def add_phi_origin_local_variable(self, variable: LocalVariable, node: "Node") -> None:
         if variable.name not in self._phi_origins_local_variables:
+            assert variable.name
             self._phi_origins_local_variables[variable.name] = (variable, set())
         (v, nodes) = self._phi_origins_local_variables[variable.name]
         assert v == variable
@@ -831,7 +859,8 @@ class Node(SourceMapping, ChildFunction):  # pylint: disable=too-many-public-met
             if isinstance(ir, OperationWithLValue):
                 var = ir.lvalue
                 if var and self._is_valid_slithir_var(var):
-                    self._slithir_vars.add(var)
+                    # The type is checked by is_valid_slithir_var
+                    self._slithir_vars.add(var)  # type: ignore
 
             if not isinstance(ir, (Phi, Index, Member)):
                 self._vars_read += [v for v in ir.read if self._is_non_slithir_var(v)]
@@ -839,8 +868,9 @@ class Node(SourceMapping, ChildFunction):  # pylint: disable=too-many-public-met
                     if isinstance(var, ReferenceVariable):
                         self._vars_read.append(var.points_to_origin)
             elif isinstance(ir, (Member, Index)):
+                # TODO investigate types for member variable left
                 var = ir.variable_left if isinstance(ir, Member) else ir.variable_right
-                if self._is_non_slithir_var(var):
+                if var and self._is_non_slithir_var(var):
                     self._vars_read.append(var)
                 if isinstance(var, ReferenceVariable):
                     origin = var.points_to_origin
@@ -864,14 +894,21 @@ class Node(SourceMapping, ChildFunction):  # pylint: disable=too-many-public-met
                 self._internal_calls.append(ir.function)
             if isinstance(ir, LowLevelCall):
                 assert isinstance(ir.destination, (Variable, SolidityVariable))
-                self._low_level_calls.append((ir.destination, ir.function_name.value))
+                self._low_level_calls.append((ir.destination, str(ir.function_name.value)))
             elif isinstance(ir, HighLevelCall) and not isinstance(ir, LibraryCall):
+                # Todo investigate this if condition
+                # It does seem right to compare against a contract
+                # This might need a refactoring
                 if isinstance(ir.destination.type, Contract):
                     self._high_level_calls.append((ir.destination.type, ir.function))
                 elif ir.destination == SolidityVariable("this"):
-                    self._high_level_calls.append((self.function.contract, ir.function))
+                    func = self.function
+                    # Can't use this in a top level function
+                    assert isinstance(func, FunctionContract)
+                    self._high_level_calls.append((func.contract, ir.function))
                 else:
                     try:
+                        # Todo this part needs more tests and documentation
                         self._high_level_calls.append((ir.destination.type.type, ir.function))
                     except AttributeError as error:
                         #  pylint: disable=raise-missing-from
@@ -887,7 +924,9 @@ class Node(SourceMapping, ChildFunction):  # pylint: disable=too-many-public-met
         self._vars_read = list(set(self._vars_read))
         self._state_vars_read = [v for v in self._vars_read if isinstance(v, StateVariable)]
         self._local_vars_read = [v for v in self._vars_read if isinstance(v, LocalVariable)]
-        self._solidity_vars_read = [v for v in self._vars_read if isinstance(v, SolidityVariable)]
+        self._solidity_vars_read = [
+            v_ for v_ in self._vars_read if isinstance(v_, SolidityVariable)
+        ]
         self._vars_written = list(set(self._vars_written))
         self._state_vars_written = [v for v in self._vars_written if isinstance(v, StateVariable)]
         self._local_vars_written = [v for v in self._vars_written if isinstance(v, LocalVariable)]
@@ -899,12 +938,15 @@ class Node(SourceMapping, ChildFunction):  # pylint: disable=too-many-public-met
 
     @staticmethod
     def _convert_ssa(v: Variable) -> Optional[Union[StateVariable, LocalVariable]]:
+        non_ssa_var: Optional[Union[StateVariable, LocalVariable]]
         if isinstance(v, StateIRVariable):
             contract = v.contract
+            assert v.name
             non_ssa_var = contract.get_state_variable_from_name(v.name)
             return non_ssa_var
         assert isinstance(v, LocalIRVariable)
         function = v.function
+        assert v.name
         non_ssa_var = function.get_local_variable_from_name(v.name)
         return non_ssa_var
 
@@ -925,10 +967,11 @@ class Node(SourceMapping, ChildFunction):  # pylint: disable=too-many-public-met
                             self._ssa_vars_read.append(origin)
 
             elif isinstance(ir, (Member, Index)):
-                if isinstance(ir.variable_right, (StateIRVariable, LocalIRVariable)):
-                    self._ssa_vars_read.append(ir.variable_right)
-                if isinstance(ir.variable_right, ReferenceVariable):
-                    origin = ir.variable_right.points_to_origin
+                variable_right: RVALUE = ir.variable_right
+                if isinstance(variable_right, (StateIRVariable, LocalIRVariable)):
+                    self._ssa_vars_read.append(variable_right)
+                if isinstance(variable_right, ReferenceVariable):
+                    origin = variable_right.points_to_origin
                     if isinstance(origin, (StateIRVariable, LocalIRVariable)):
                         self._ssa_vars_read.append(origin)
 
@@ -948,20 +991,20 @@ class Node(SourceMapping, ChildFunction):  # pylint: disable=too-many-public-met
         self._ssa_local_vars_read = [v for v in self._ssa_vars_read if isinstance(v, LocalVariable)]
         self._ssa_vars_written = list(set(self._ssa_vars_written))
         self._ssa_state_vars_written = [
-            v for v in self._ssa_vars_written if isinstance(v, StateVariable)
+            v for v in self._ssa_vars_written if v and isinstance(v, StateIRVariable)
         ]
         self._ssa_local_vars_written = [
-            v for v in self._ssa_vars_written if isinstance(v, LocalVariable)
+            v for v in self._ssa_vars_written if v and isinstance(v, LocalIRVariable)
         ]
 
         vars_read = [self._convert_ssa(x) for x in self._ssa_vars_read]
         vars_written = [self._convert_ssa(x) for x in self._ssa_vars_written]
 
-        self._vars_read += [v for v in vars_read if v not in self._vars_read]
+        self._vars_read += [v_ for v_ in vars_read if v_ and v_ not in self._vars_read]
         self._state_vars_read = [v for v in self._vars_read if isinstance(v, StateVariable)]
         self._local_vars_read = [v for v in self._vars_read if isinstance(v, LocalVariable)]
 
-        self._vars_written += [v for v in vars_written if v not in self._vars_written]
+        self._vars_written += [v_ for v_ in vars_written if v_ and v_ not in self._vars_written]
         self._state_vars_written = [v for v in self._vars_written if isinstance(v, StateVariable)]
         self._local_vars_written = [v for v in self._vars_written if isinstance(v, LocalVariable)]
 
@@ -978,7 +1021,7 @@ class Node(SourceMapping, ChildFunction):  # pylint: disable=too-many-public-met
             additional_info += " " + str(self.expression)
         elif self.variable_declaration:
             additional_info += " " + str(self.variable_declaration)
-        txt = self._node_type.value + additional_info
+        txt = str(self._node_type.value) + additional_info
         return txt
 
 

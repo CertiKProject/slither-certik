@@ -1,10 +1,11 @@
-from typing import TYPE_CHECKING, Tuple
+from typing import TYPE_CHECKING, Tuple, Dict
 
-from slither.core.children.child_contract import ChildContract
 from slither.core.declarations.top_level import TopLevel
+from slither.core.declarations.contract_level import ContractLevel
 from slither.core.solidity_types import Type, ElementaryType
 
 if TYPE_CHECKING:
+    from slither.core.declarations.function_top_level import FunctionTopLevel
     from slither.core.declarations import Contract
     from slither.core.scope.scope import FileScope
 
@@ -40,16 +41,18 @@ class TypeAlias(Type):
 
 
 class TypeAliasTopLevel(TypeAlias, TopLevel):
-    def __init__(self, underlying_type: Type, name: str, scope: "FileScope") -> None:
+    def __init__(self, underlying_type: ElementaryType, name: str, scope: "FileScope") -> None:
         super().__init__(underlying_type, name)
         self.file_scope: "FileScope" = scope
+        # operators redefined
+        self.operators: Dict[str, "FunctionTopLevel"] = {}
 
     def __str__(self) -> str:
         return self.name
 
 
-class TypeAliasContract(TypeAlias, ChildContract):
-    def __init__(self, underlying_type: Type, name: str, contract: "Contract") -> None:
+class TypeAliasContract(TypeAlias, ContractLevel):
+    def __init__(self, underlying_type: ElementaryType, name: str, contract: "Contract") -> None:
         super().__init__(underlying_type, name)
         self._contract: "Contract" = contract
 

@@ -1,5 +1,5 @@
 import string
-from typing import Optional, Union, TYPE_CHECKING
+from typing import Optional, Union, TYPE_CHECKING, Any
 
 from slither.core.expressions.expression import Expression
 from slither.core.solidity_types.elementary_type import Fixed, Int, Ufixed, Uint, ElementaryType
@@ -69,7 +69,7 @@ class Literal(Expression):
         # be sure to handle any character
         return str(self._value)
 
-    def __eq__(self, other) -> bool:
+    def __eq__(self, other: Any) -> bool:
         if not isinstance(other, Literal):
             return False
         return (self.value, self.subdenomination) == (other.value, other.subdenomination)

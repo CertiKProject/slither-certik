@@ -31,7 +31,7 @@ def get_default_value(ty : Type) -> Expression:
         return Literal("false", ElementaryType("bool"))
     elif isinstance(ty, ArrayType) and ty.is_dynamic_array:
         return CallExpression(
-            NewArray(1, ty.type),
+            NewArray(ty),
             [Literal("0", ElementaryType("uint256"))],
             f"{ty.type}[] memory"
         )
