@@ -25,7 +25,7 @@ class InternalCall(Call, OperationWithLValue):  # pylint: disable=too-many-insta
         super().__init__(names=names)
         self._contract_name = ""
         if isinstance(function, Function):
-            self._function = function
+            self._function: Optional[Function] = function
             self._function_name = function.name
             if isinstance(function, FunctionContract):
                 self._contract_name = function.contract_declarer.name
@@ -46,7 +46,7 @@ class InternalCall(Call, OperationWithLValue):  # pylint: disable=too-many-insta
         return list(self._unroll(self.arguments))
 
     @property
-    def function(self):
+    def function(self) -> Optional[Function]:
         return self._function
 
     @function.setter

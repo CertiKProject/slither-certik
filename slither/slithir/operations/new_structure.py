@@ -14,7 +14,10 @@ from slither.slithir.variables.temporary_ssa import TemporaryVariableSSA
 
 class NewStructure(Call, OperationWithLValue):
     def __init__(
-        self, structure: StructureContract, lvalue: Union[TemporaryVariableSSA, TemporaryVariable], names: Optional[List[str]]
+        self,
+        structure: StructureContract,
+        lvalue: Union[TemporaryVariableSSA, TemporaryVariable],
+        names: Optional[List[str]]
     ) -> None:
         super().__init__(names = names)
         assert isinstance(structure, Structure)
@@ -38,4 +41,5 @@ class NewStructure(Call, OperationWithLValue):
 
     def __str__(self):
         args = [str(a) for a in self.arguments]
-        return f"{self.lvalue} = new {self.structure_name}({','.join(args)})"
+        lvalue = self.lvalue
+        return f"{lvalue}({lvalue.type}) = new {self.structure_name}({','.join(args)})"
