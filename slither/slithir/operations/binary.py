@@ -129,7 +129,7 @@ class Binary(OperationWithLValue):
             and isinstance(right_variable.type, ElementaryType)
             and right_variable.type.type in Uint + Int
         ):
-            if left_variable.type.size > right_variable.type.size:
+            if left_variable.type.size >= right_variable.type.size:
                 result.set_type(left_variable.type)
             else:
                 result.set_type(right_variable.type)
