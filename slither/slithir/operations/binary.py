@@ -11,6 +11,7 @@ from slither.slithir.utils.utils import is_valid_lvalue, is_valid_rvalue
 from slither.slithir.variables import ReferenceVariable
 from slither.core.source_mapping.source_mapping import SourceMapping
 from slither.core.variables.variable import Variable
+from slither.core.solidity_types.elementary_type import Int, Uint
 
 
 logger = logging.getLogger("BinaryOperationIR")
@@ -122,6 +123,16 @@ class Binary(OperationWithLValue):
         self._lvalue = result
         if BinaryType.return_bool(operation_type):
             result.set_type(ElementaryType("bool"))
+        elif (
+            isinstance(left_variable.type, ElementaryType)
+            and left_variable.type.type in Uint + Int
+            and isinstance(right_variable.type, ElementaryType)
+            and right_variable.type.type in Uint + Int
+        ):
+            if left_variable.type.size >= right_variable.type.size:
+                result.set_type(left_variable.type)
+            else:
+                result.set_type(right_variable.type)
         else:
             result.set_type(left_variable.type)
 
