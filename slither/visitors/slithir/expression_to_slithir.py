@@ -65,6 +65,7 @@ from slither.visitors.expression.expression import ExpressionVisitor
 from slither.visitors.expression.constants_folding import ConstantFolding, NotConstant
 from slither.core.solidity_types.user_defined_type import UserDefinedType
 from slither.core.declarations.structure import Structure
+from slither.core.solidity_types.typename_type import Typename
 
 if TYPE_CHECKING:
     from slither.core.cfg.node import Node
@@ -542,6 +543,15 @@ class ExpressionToSlithIR(ExpressionVisitor):
             and expression.member_name in expr.type.type.elems
         ):
             val.set_type(expr.type.type.elems[expression.member_name].type)
+
+        if isinstance(expr, Contract):
+            if expression.member_name in expr.structures_as_dict:
+                type = UserDefinedType(expr.structures_as_dict[expression.member_name])
+                val.set_type(Typename(type))
+            if expression.member_name in expr.enums_as_dict:
+                type = UserDefinedType(expr.enums_as_dict[expression.member_name])
+                val.set_type(Typename(type))
+
         member = Member(expr, Constant(expression.member_name), val)
         member.set_expression(expression)
         self._result.append(member)

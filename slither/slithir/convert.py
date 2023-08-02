@@ -106,6 +106,7 @@ import slither.slithir.operations.solidity_call
 import slither.slithir.operations.transfer
 import slither.slithir.variables.temporary
 from slither.core.expressions.expression import Expression
+from slither.core.solidity_types.typename_type import Typename
 
 if TYPE_CHECKING:
     from slither.core.cfg.node import Node
@@ -1303,6 +1304,17 @@ def convert_to_solidity_func(
     :param ir:
     :return:
     """
+
+    def arg_to_type(arg):
+        """Convert the rvalue `arg` found in the second argument of abi.decode to a type"""
+        if isinstance(arg, (Structure, Enum, Contract)):
+            return UserDefinedType(arg)
+        elif isinstance(arg, ReferenceVariable):
+            assert isinstance(arg.type, Typename)
+            return arg.type.type
+        else:
+            return arg
+
     call = SolidityFunction(f"abi.{ir.function_name}()")
     new_ir = SolidityCall(call, ir.nbr_arguments, ir.lvalue, ir.type_call)
     new_ir.arguments = ir.arguments
@@ -1316,23 +1328,12 @@ def convert_to_solidity_func(
         and len(new_ir.arguments) == 2
         and isinstance(new_ir.arguments[1], list)
     ):
-        def arg_to_type(arg):
-            if isinstance(arg, (Structure, Enum, Contract)):
-                return UserDefinedType(arg)
-            else:
-                return arg
         types = list(map(arg_to_type, new_ir.arguments[1]))
         new_ir.lvalue.set_type(types)
     # abi.decode where the type to decode is a singleton
     # abi.decode(a, (uint))
     elif call == SolidityFunction("abi.decode()") and len(new_ir.arguments) == 2:
-        # If the variable is a referenceVariable, we are lost
-        # See https://github.com/crytic/slither/issues/566 for potential solutions
-        if not isinstance(new_ir.arguments[1], ReferenceVariable):
-            decode_type = new_ir.arguments[1]
-            if isinstance(decode_type, (Structure, Enum, Contract)):
-                decode_type = UserDefinedType(decode_type)
-            new_ir.lvalue.set_type(decode_type)
+        new_ir.lvalue.set_type(arg_to_type(new_ir.arguments[1]))
     else:
         new_ir.lvalue.set_type(call.return_type)
     return new_ir
