@@ -95,4 +95,6 @@ def compute_dominance_frontier(nodes: List["Node"]) -> None:
                     runner.dominance_frontier = runner.dominance_frontier.union({node})
                 while runner != node.immediate_dominator:
                     runner.dominance_frontier = runner.dominance_frontier.union({node})
+                    # CertiK: disabled this assertion due to https://github.com/crytic/slither/issues/2072
+                    # assert runner.immediate_dominator
                     runner = runner.immediate_dominator

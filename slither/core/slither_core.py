@@ -13,7 +13,7 @@ from typing import Optional, Dict, List, Set, Union, Tuple
 from crytic_compile import CryticCompile
 from crytic_compile.utils.naming import Filename
 
-from slither.core.children.child_contract import ChildContract
+from slither.core.declarations.contract_level import ContractLevel
 from slither.core.compilation_unit import SlitherCompilationUnit
 from slither.core.context.context import Context
 from slither.core.declarations import Contract, FunctionContract
@@ -215,7 +215,7 @@ class SlitherCore(Context):
                     isinstance(thing, FunctionContract)
                     and thing.contract_declarer == thing.contract
                 )
-                or (isinstance(thing, ChildContract) and not isinstance(thing, FunctionContract))
+                or (isinstance(thing, ContractLevel) and not isinstance(thing, FunctionContract))
             ):
                 self._offset_to_objects[definition.filename][offset].add(thing)
 
@@ -233,7 +233,7 @@ class SlitherCore(Context):
                         and thing.contract_declarer == thing.contract
                     )
                     or (
-                        isinstance(thing, ChildContract) and not isinstance(thing, FunctionContract)
+                        isinstance(thing, ContractLevel) and not isinstance(thing, FunctionContract)
                     )
                 ):
                     self._offset_to_objects[definition.filename][offset].add(thing)
@@ -491,8 +491,8 @@ class SlitherCore(Context):
     ###################################################################################
 
     @property
-    def crytic_compile(self) -> Optional[CryticCompile]:
-        return self._crytic_compile
+    def crytic_compile(self) -> CryticCompile:
+        return self._crytic_compile  # type: ignore
 
     # endregion
     ###################################################################################

@@ -35,6 +35,7 @@ from slither.utils.output import (
 from slither.utils.output_capture import StandardOutputCapture
 from slither.utils.colors import red, set_colorization_enabled
 from slither.utils.command_line import (
+    FailOnLevel,
     output_detectors,
     output_results_to_markdown,
     output_detectors_json,
@@ -66,7 +67,7 @@ def process_single(
     args: argparse.Namespace,
     detector_classes: List[Type[AbstractDetector]],
     printer_classes: List[Type[AbstractPrinter]],
-) -> Tuple[Slither, List[Dict], List[Dict], int]:
+) -> Tuple[Slither, List[Dict], List[Output], int]:
     """
     The core high-level code for running Slither static analysis.
 
@@ -86,7 +87,7 @@ def process_all(
     args: argparse.Namespace,
     detector_classes: List[Type[AbstractDetector]],
     printer_classes: List[Type[AbstractPrinter]],
-) -> Tuple[List[Slither], List[Dict], List[Dict], int]:
+) -> Tuple[List[Slither], List[Dict], List[Output], int]:
     compilations = compile_all(target, **vars(args))
     slither_instances = []
     results_detectors = []
@@ -139,23 +140,6 @@ def _process(
         results_printers.extend(printer_results)
 
     return slither, results_detectors, results_printers, analyzed_contracts_count
-
-
-# TODO: delete me?
-def process_from_asts(
-    filenames: List[str],
-    args: argparse.Namespace,
-    detector_classes: List[Type[AbstractDetector]],
-    printer_classes: List[Type[AbstractPrinter]],
-) -> Tuple[Slither, List[Dict], List[Dict], int]:
-    all_contracts: List[str] = []
-
-    for filename in filenames:
-        with open(filename, encoding="utf8") as file_open:
-            contract_loaded = json.load(file_open)
-            all_contracts.append(contract_loaded["ast"])
-
-    return process_single(all_contracts, args, detector_classes, printer_classes)
 
 
 # endregion
@@ -223,22 +207,22 @@ def choose_detectors(
         detectors_to_run = sorted(detectors_to_run, key=lambda x: x.IMPACT)
         return detectors_to_run
 
-    if args.exclude_optimization and not args.fail_pedantic:
+    if args.exclude_optimization:
         detectors_to_run = [
             d for d in detectors_to_run if d.IMPACT != DetectorClassification.OPTIMIZATION
         ]
 
-    if args.exclude_informational and not args.fail_pedantic:
+    if args.exclude_informational:
         detectors_to_run = [
             d for d in detectors_to_run if d.IMPACT != DetectorClassification.INFORMATIONAL
         ]
-    if args.exclude_low and not args.fail_low:
+    if args.exclude_low:
         detectors_to_run = [d for d in detectors_to_run if d.IMPACT != DetectorClassification.LOW]
-    if args.exclude_medium and not args.fail_medium:
+    if args.exclude_medium:
         detectors_to_run = [
             d for d in detectors_to_run if d.IMPACT != DetectorClassification.MEDIUM
         ]
-    if args.exclude_high and not args.fail_high:
+    if args.exclude_high:
         detectors_to_run = [d for d in detectors_to_run if d.IMPACT != DetectorClassification.HIGH]
     if args.detectors_to_exclude:
         detectors_to_run = [
@@ -403,41 +387,44 @@ def parse_args(
         default=defaults_flag_in_config["exclude_high"],
     )
 
-    group_detector.add_argument(
+    fail_on_group = group_detector.add_mutually_exclusive_group()
+    fail_on_group.add_argument(
         "--fail-pedantic",
-        help="Return the number of findings in the exit code",
-        action="store_true",
-        default=defaults_flag_in_config["fail_pedantic"],
+        help="Fail if any findings are detected",
+        action="store_const",
+        dest="fail_on",
+        const=FailOnLevel.PEDANTIC,
     )
-
-    group_detector.add_argument(
-        "--no-fail-pedantic",
-        help="Do not return the number of findings in the exit code. Opposite of --fail-pedantic",
-        dest="fail_pedantic",
-        action="store_false",
-        required=False,
-    )
-
-    group_detector.add_argument(
+    fail_on_group.add_argument(
         "--fail-low",
-        help="Fail if low or greater impact finding is detected",
-        action="store_true",
-        default=defaults_flag_in_config["fail_low"],
+        help="Fail if any low or greater impact findings are detected",
+        action="store_const",
+        dest="fail_on",
+        const=FailOnLevel.LOW,
     )
-
-    group_detector.add_argument(
+    fail_on_group.add_argument(
         "--fail-medium",
-        help="Fail if medium or greater impact finding is detected",
-        action="store_true",
-        default=defaults_flag_in_config["fail_medium"],
+        help="Fail if any medium or greater impact findings are detected",
+        action="store_const",
+        dest="fail_on",
+        const=FailOnLevel.MEDIUM,
     )
-
-    group_detector.add_argument(
+    fail_on_group.add_argument(
         "--fail-high",
-        help="Fail if high impact finding is detected",
-        action="store_true",
-        default=defaults_flag_in_config["fail_high"],
+        help="Fail if any high impact findings are detected",
+        action="store_const",
+        dest="fail_on",
+        const=FailOnLevel.HIGH,
     )
+    fail_on_group.add_argument(
+        "--fail-none",
+        "--no-fail-pedantic",
+        help="Do not return the number of findings in the exit code",
+        action="store_const",
+        dest="fail_on",
+        const=FailOnLevel.NONE,
+    )
+    fail_on_group.set_defaults(fail_on=FailOnLevel.PEDANTIC)
 
     group_detector.add_argument(
         "--show-ignored-findings",
@@ -605,9 +592,6 @@ def parse_args(
         default=False,
     )
 
-    # if the json is splitted in different files
-    parser.add_argument("--splitted", help=argparse.SUPPRESS, action="store_true", default=False)
-
     # Disable the throw/catch on partial analyses
     parser.add_argument(
         "--disallow-partial", help=argparse.SUPPRESS, action="store_true", default=False
@@ -623,7 +607,7 @@ def parse_args(
     args.filter_paths = parse_filter_paths(args)
 
     # Verify our json-type output is valid
-    args.json_types = set(args.json_types.split(","))
+    args.json_types = set(args.json_types.split(","))  # type:ignore
     for json_type in args.json_types:
         if json_type not in JSON_OUTPUT_TYPES:
             raise Exception(f'Error: "{json_type}" is not a valid JSON result output type.')
@@ -632,7 +616,9 @@ def parse_args(
 
 
 class ListDetectors(argparse.Action):  # pylint: disable=too-few-public-methods
-    def __call__(self, parser, *args, **kwargs):  # pylint: disable=signature-differs
+    def __call__(
+        self, parser: Any, *args: Any, **kwargs: Any
+    ) -> None:  # pylint: disable=signature-differs
         detectors, _ = get_detectors_and_printers()
         output_detectors(detectors)
         parser.exit()
@@ -694,14 +680,14 @@ class OutputWiki(argparse.Action):  # pylint: disable=too-few-public-methods
 
 
 class FormatterCryticCompile(logging.Formatter):
-    def format(self, record):
+    def format(self, record: logging.LogRecord) -> str:
         # for i, msg in enumerate(record.msg):
         if record.msg.startswith("Compilation warnings/errors on "):
-            txt = record.args[1]
-            txt = txt.split("\n")
+            txt = record.args[1]  # type:ignore
+            txt = txt.split("\n")  # type:ignore
             txt = [red(x) if "Error" in x else x for x in txt]
             txt = "\n".join(txt)
-            record.args = (record.args[0], txt)
+            record.args = (record.args[0], txt)  # type:ignore
         return super().format(record)
 
 
@@ -744,7 +730,7 @@ def main_impl(
     set_colorization_enabled(False if args.disable_color else sys.stdout.isatty())
 
     # Define some variables for potential JSON output
-    json_results = {}
+    json_results: Dict[str, Any] = {}
     output_error = None
     outputting_json = args.json is not None
     outputting_json_stdout = args.json == "-"
@@ -793,7 +779,7 @@ def main_impl(
     crytic_compile_error.setLevel(logging.INFO)
 
     results_detectors: List[Dict] = []
-    results_printers: List[Dict] = []
+    results_printers: List[Output] = []
     try:
         filename = args.filename
 
@@ -806,26 +792,17 @@ def main_impl(
             number_contracts = 0
 
             slither_instances = []
-            if args.splitted:
+            for filename in filenames:
                 (
                     slither_instance,
-                    results_detectors,
-                    results_printers,
-                    number_contracts,
-                ) = process_from_asts(filenames, args, detector_classes, printer_classes)
+                    results_detectors_tmp,
+                    results_printers_tmp,
+                    number_contracts_tmp,
+                ) = process_single(filename, args, detector_classes, printer_classes)
+                number_contracts += number_contracts_tmp
+                results_detectors += results_detectors_tmp
+                results_printers += results_printers_tmp
                 slither_instances.append(slither_instance)
-            else:
-                for filename in filenames:
-                    (
-                        slither_instance,
-                        results_detectors_tmp,
-                        results_printers_tmp,
-                        number_contracts_tmp,
-                    ) = process_single(filename, args, detector_classes, printer_classes)
-                    number_contracts += number_contracts_tmp
-                    results_detectors += results_detectors_tmp
-                    results_printers += results_printers_tmp
-                    slither_instances.append(slither_instance)
 
         # Rely on CryticCompile to discern the underlying type of compilations.
         else:
@@ -923,17 +900,18 @@ def main_impl(
         stats = pstats.Stats(cp).sort_stats("cumtime")
         stats.print_stats()
 
-    if args.fail_high:
+    fail_on = FailOnLevel(args.fail_on)
+    if fail_on == FailOnLevel.HIGH:
         fail_on_detection = any(result["impact"] == "High" for result in results_detectors)
-    elif args.fail_medium:
+    elif fail_on == FailOnLevel.MEDIUM:
         fail_on_detection = any(
             result["impact"] in ["Medium", "High"] for result in results_detectors
         )
-    elif args.fail_low:
+    elif fail_on == FailOnLevel.LOW:
         fail_on_detection = any(
             result["impact"] in ["Low", "Medium", "High"] for result in results_detectors
         )
-    elif args.fail_pedantic:
+    elif fail_on == FailOnLevel.PEDANTIC:
         fail_on_detection = bool(results_detectors)
     else:
         fail_on_detection = False
