@@ -128,6 +128,9 @@ class ConstantFolding(ExpressionVisitor):
             and isinstance(left, (int, Fraction))
             and isinstance(right, (int, Fraction))
         ):
+            if right == 0:
+                # not a constant because it's not even well defined
+                raise NotConstant
             # TODO: maybe check for right + left to be int to use // ?
             set_val(expression, left // right if isinstance(right, int) else left / right)
         elif (
