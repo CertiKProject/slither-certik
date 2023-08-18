@@ -70,6 +70,7 @@ class ConstantFolding(ExpressionVisitor):
     # pylint: disable=import-outside-toplevel
     def _post_identifier(self, expression: Identifier) -> None:
         from slither.core.declarations.solidity_variables import SolidityFunction
+        from slither.core.declarations.contract import Contract
 
         if isinstance(expression.value, Variable):
             if expression.value.is_constant:
@@ -89,6 +90,8 @@ class ConstantFolding(ExpressionVisitor):
                 set_val(expression, convert_string_to_int(expr.converted_value))
             else:
                 raise NotConstant
+        elif isinstance(expression.value, Contract) and expression.value.is_library:
+            set_val(expression, expression.value)
         elif isinstance(expression.value, SolidityFunction):
             set_val(expression, expression.value)
         else:
@@ -233,7 +236,30 @@ class ConstantFolding(ExpressionVisitor):
         raise NotConstant
 
     def _post_member_access(self, expression: expressions.MemberAccess) -> None:
-        raise NotConstant
+        from slither.core.declarations.contract import Contract
+        if (
+            isinstance(expression.expression, Identifier)
+            and isinstance(expression.expression.value, Contract)
+            and expression.expression.value.is_library
+            and expression.member_name in expression.expression.value.variables_as_dict
+            and expression.expression.value.variables_as_dict[expression.member_name].is_constant
+        ):
+            member = expression.expression.value.variables_as_dict[expression.member_name]
+            initializer = member.expression
+            if isinstance(
+                initializer,
+                (
+                    BinaryOperation, UnaryOperation, Identifier, TupleExpression,
+                    TypeConversion, CallExpression, MemberAccess
+                ),
+            ):
+                cf = ConstantFolding(initializer, self._type)
+                initializer = cf.result()
+            assert isinstance(initializer, Literal)
+
+            set_val(expression, convert_string_to_int(initializer.converted_value))
+        else:
+            raise NotConstant
 
     def _post_new_array(self, expression: expressions.NewArray) -> None:
         raise NotConstant
