@@ -71,6 +71,7 @@ from slither.visitors.expression.constants_folding import ConstantFolding, NotCo
 from slither.core.solidity_types.user_defined_type import UserDefinedType
 from slither.core.declarations.structure import Structure
 from slither.core.solidity_types.typename_type import Typename
+from slither.core.solidity_types.elementary_type import ElementaryTypeName
 
 if TYPE_CHECKING:
     from slither.core.cfg.node import Node
@@ -244,6 +245,8 @@ class ExpressionToSlithIR(ExpressionVisitor):
                 set_val(expression, left)
 
     def _attempt_constant_folding(self, expression):
+        if isinstance(expression.type, str) and not expression.type in ElementaryTypeName:
+            return False
         try:
             const_fold = ConstantFolding(expression, expression.type)
         except (NotConstant, AttributeError):
@@ -471,6 +474,9 @@ class ExpressionToSlithIR(ExpressionVisitor):
         set_val(expression, cst)
 
     def _post_member_access(self, expression: MemberAccess) -> None:
+        if self._node.compilation_unit.generates_certik_ir and self._attempt_constant_folding(expression):
+            return
+
         expr = get(expression.expression)
 
         # Look for type(X).max / min
