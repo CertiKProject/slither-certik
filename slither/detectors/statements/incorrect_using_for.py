@@ -18,7 +18,6 @@ from slither.detectors.abstract_detector import (
 )
 from slither.utils.output import Output
 
-
 def _is_correctly_used(type_: Type, library: Contract) -> bool:
     """
     Checks if a `using library for type_` statement is used correctly (that is, does library contain any function
@@ -160,7 +159,7 @@ class IncorrectUsingFor(AbstractDetector):
     Detector for incorrect using-for statement usage.
     """
 
-    ARGUMENT = "incorrect-using-for"
+    ARGUMENT = "slither-incorrect-using-for"
     HELP = "Detects using-for statement usage when no function from a given library matches a given type"
     IMPACT = DetectorClassification.INFORMATIONAL
     CONFIDENCE = DetectorClassification.HIGH
@@ -181,7 +180,7 @@ class IncorrectUsingFor(AbstractDetector):
     library L {
         function f(bool) public pure {}
     }
-    
+
     using L for uint;
     ```
     Such a code will compile despite the fact that `L` has no function with `uint` as its first argument."""
@@ -195,11 +194,12 @@ class IncorrectUsingFor(AbstractDetector):
         self, results: List[Output], uf: UsingForTopLevel, type_: Type, library: Contract
     ) -> None:
         info: DETECTOR_INFO = [
-            f"using-for statement at {uf.source_mapping} is incorrect - no matching function for {type_} found in ",
-            library,
-            ".\n",
+            f"statement {uf} is incorrect - no matching function for {type_} found in '{library.name}.\n",
         ]
+
         res = self.generate_result(info)
+        res.add(uf, { "lib" : str(library.name), "ty": str(type_) })
+
         results.append(res)
 
     def _detect(self) -> List[Output]:
