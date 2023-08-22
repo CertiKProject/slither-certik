@@ -20,6 +20,7 @@ from slither.core.declarations import (
     FunctionContract,
     CustomError
 )
+from slither.core.declarations.using_for_top_level import UsingForTopLevel
 from slither.core.expressions import Expression
 from slither.core.source_mapping.source_mapping import SourceMapping
 from slither.core.variables.local_variable import LocalVariable
@@ -249,7 +250,7 @@ def _convert_to_description(d: str) -> str:
     if hasattr(d, "name"):
         return f"{d.name} ({d.source_mapping})"
 
-    if isinstance(d, Expression):
+    if isinstance(d, (Expression, UsingForTopLevel)):
         return f"{d}({d.source_mapping})"
 
     raise SlitherError(f"{type(d)} cannot be converted (no name, or canonical_name")
@@ -273,7 +274,7 @@ def _convert_to_markdown(d: str, markdown_root: str) -> str:
     if hasattr(d, "name"):
         return f"[{d.name}]({d.source_mapping.to_markdown(markdown_root)})"
 
-    if isinstance(d, Expression):
+    if isinstance(d, (Expression, UsingForTopLevel)):
         return f"{d}({d.source_mapping.to_markdown(markdown_root)})"
 
     raise SlitherError(f"{type(d)} cannot be converted (no name, or canonical_name")
@@ -305,7 +306,7 @@ def _convert_to_id(d: str) -> str:
     if hasattr(d, "name"):
         return f"{d.name}"
 
-    if isinstance(d, Expression):
+    if isinstance(d, (Expression, UsingForTopLevel)):
         return f"{d}({d.source_mapping})"
 
     raise SlitherError(f"{type(d)} cannot be converted (no name, or canonical_name")
@@ -452,6 +453,8 @@ class Output:
             self.add_struct(add, additional_fields=additional_fields)
         elif isinstance(add, Pragma):
             self.add_pragma(add, additional_fields=additional_fields)
+        elif isinstance(add, UsingForTopLevel):
+            self.add_using_for(add, additional_fields=additional_fields)
         elif isinstance(add, Node):
             self.add_node(add, additional_fields=additional_fields)
         elif isinstance(add, CustomError):
@@ -653,6 +656,22 @@ class Output:
 
     # endregion
     ###################################################################################
+    ###################################################################################
+    # region UsingFor
+    ###################################################################################
+
+    def add_using_for(self, using_for: UsingForTopLevel, additional_fields: Optional[Dict] = None) -> None:
+        if additional_fields is None:
+            additional_fields = {}
+        element = _create_base_element(
+            "using_for",
+            "using for statement",
+            using_for.source_mapping.to_json(),
+            {},
+            additional_fields
+        )
+        self._data["elements"].append(element)
+
     ###################################################################################
     # region File
     ###################################################################################
