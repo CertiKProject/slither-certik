@@ -628,7 +628,8 @@ class ContractSolc(CallerContextExpression):
                         uf = StructureContract(self._contract.compilation_unit)
                         uf.set_offset(using_for["src"], self._contract.compilation_unit)
                         StructureContract.set_contract(uf, self._contract)
-                        using_string = "using {" + ",".join(using_for["functionList"]) + "}"
+                        function_names = [d["function"]["name"] for d in using_for["functionList"]]
+                        using_string = "using {" + ",".join(function_names) + "}"
                         uf.canonical_name = uf.name = f"{using_string} for {type_name} in {self._contract}"
                         # We have a list of functions. A function can be topLevel or a library function
                         self._analyze_function_list(using_for["functionList"], type_name, uf)
