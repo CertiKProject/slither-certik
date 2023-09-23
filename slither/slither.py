@@ -133,6 +133,7 @@ class Slither(SlitherCore):  # pylint: disable=too-many-instance-attributes
         self._detectors = []
         self._printers = []
 
+        self._filter_exclude = kwargs.get("filter_exclude", True)
         filter_paths = kwargs.get("filter_paths", [])
         for p in filter_paths:
             self.add_path_to_filter(p)

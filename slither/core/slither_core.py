@@ -56,6 +56,8 @@ class SlitherCore(Context):
         # Because of the multiple compilation support, we might analyze
         # Multiple time the same result, so we remove duplicates
         self._currently_seen_resuts: Set[str] = set()
+
+        self._filter_exclude = True
         self._paths_to_filter: Set[str] = set()
 
         self._crytic_compile: Optional[CryticCompile] = None
@@ -417,7 +419,7 @@ class SlitherCore(Context):
         source_mapping_elements = list(
             map(lambda x: pathlib.Path(x).resolve().as_posix() if x else x, source_mapping_elements)
         )
-        matching = False
+        matching = not self._filter_exclude
 
         for path in self._paths_to_filter:
             try:
@@ -425,7 +427,7 @@ class SlitherCore(Context):
                     bool(re.search(_relative_path_format(path), src_mapping))
                     for src_mapping in source_mapping_elements
                 ):
-                    matching = True
+                    matching = not self._filter_exclude
                     break
             except re.error:
                 logger.error(
