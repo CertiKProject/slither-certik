@@ -427,7 +427,7 @@ class SlitherCore(Context):
                     bool(re.search(_relative_path_format(path), src_mapping))
                     for src_mapping in source_mapping_elements
                 ):
-                    matching = not self._filter_exclude
+                    matching = self._filter_exclude
                     break
             except re.error:
                 logger.error(
