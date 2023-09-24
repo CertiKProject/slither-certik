@@ -419,7 +419,8 @@ class SlitherCore(Context):
         source_mapping_elements = list(
             map(lambda x: pathlib.Path(x).resolve().as_posix() if x else x, source_mapping_elements)
         )
-        matching = not self._filter_exclude
+        # matching = not self._filter_exclude
+        matching = True
 
         for path in self._paths_to_filter:
             try:
@@ -427,7 +428,8 @@ class SlitherCore(Context):
                     bool(re.search(_relative_path_format(path), src_mapping))
                     for src_mapping in source_mapping_elements
                 ):
-                    matching = self._filter_exclude
+                    # matching = self._filter_exclude
+                    matching = False
                     break
             except re.error:
                 logger.error(
