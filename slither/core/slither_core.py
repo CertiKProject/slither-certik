@@ -212,12 +212,12 @@ class SlitherCore(Context):
         for offset in range(definition.start, definition.end + 1):
 
             if (
-                isinstance(thing, TopLevel)
-                or (
+                    isinstance(thing, TopLevel)
+                    or (
                     isinstance(thing, FunctionContract)
                     and thing.contract_declarer == thing.contract
-                )
-                or (isinstance(thing, ContractLevel) and not isinstance(thing, FunctionContract))
+            )
+                    or (isinstance(thing, ContractLevel) and not isinstance(thing, FunctionContract))
             ):
                 self._offset_to_objects[definition.filename][offset].add(thing)
 
@@ -229,14 +229,14 @@ class SlitherCore(Context):
             for offset in range(ref.start, ref.end + 1):
 
                 if (
-                    isinstance(thing, TopLevel)
-                    or (
+                        isinstance(thing, TopLevel)
+                        or (
                         isinstance(thing, FunctionContract)
                         and thing.contract_declarer == thing.contract
-                    )
-                    or (
+                )
+                        or (
                         isinstance(thing, ContractLevel) and not isinstance(thing, FunctionContract)
-                    )
+                )
                 ):
                     self._offset_to_objects[definition.filename][offset].add(thing)
 
@@ -363,9 +363,9 @@ class SlitherCore(Context):
             )
             for elem in r["elements"]
             if "source_mapping" in elem
-            and "filename_absolute" in elem["source_mapping"]
-            and "lines" in elem["source_mapping"]
-            and len(elem["source_mapping"]["lines"]) > 0
+               and "filename_absolute" in elem["source_mapping"]
+               and "lines" in elem["source_mapping"]
+               and len(elem["source_mapping"]["lines"]) > 0
         )
 
         for file, lines in mapping_elements_with_lines:
@@ -419,17 +419,18 @@ class SlitherCore(Context):
         source_mapping_elements = list(
             map(lambda x: pathlib.Path(x).resolve().as_posix() if x else x, source_mapping_elements)
         )
-        # matching = not self._filter_exclude
-        matching = True
+        matching = not self._filter_exclude
+        print("filter_exclude:", self._filter_exclude)
+        # matching = True
 
         for path in self._paths_to_filter:
             try:
                 if any(
-                    bool(re.search(_relative_path_format(path), src_mapping))
-                    for src_mapping in source_mapping_elements
+                        bool(re.search(_relative_path_format(path), src_mapping))
+                        for src_mapping in source_mapping_elements
                 ):
-                    # matching = self._filter_exclude
-                    matching = False
+                    matching = self._filter_exclude
+                    # matching = False
                     break
             except re.error:
                 logger.error(
