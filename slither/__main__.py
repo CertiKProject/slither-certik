@@ -7,6 +7,7 @@ import inspect
 import json
 import logging
 import os
+import pickle
 import pstats
 import sys
 import traceback
@@ -93,7 +94,13 @@ def process_all(
     detector_classes: List[Type[AbstractDetector]],
     printer_classes: List[Type[AbstractPrinter]],
 ) -> Tuple[List[Slither], List[Dict], List[Output], int]:
-    compilations = compile_all(target, **vars(args))
+    if args.compilations_pkl_path is None:
+        compilations = compile_all(target, **vars(args))
+    else:
+        pkl_path = os.path.join(target, args.compilations_pkl_path)
+        logger.info(f"Importing existing compilations from {pkl_path}")
+        with open(pkl_path, 'rb') as f:
+            compilations = pickle.load(f)
     slither_instances = []
     results_detectors = []
     results_printers = []
@@ -301,6 +308,14 @@ def parse_args(
     parser.add_argument("filename", help=argparse.SUPPRESS)
 
     cryticparser.init(parser)
+
+    parser.add_argument(
+        "--import-from-autobuild",
+        help="Import compilations from autobuild and skip building",
+        action="store",
+        dest="compilations_pkl_path",
+        default=None
+    )
 
     parser.add_argument(
         "--version",
