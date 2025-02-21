@@ -513,7 +513,11 @@ def propagate_type_and_convert_call(result: List[Operation], node: "Node") -> Li
             )
             decl_param_names = get_declared_param_names(ins)
             if decl_param_names is not None:
-                call_data = reorder_arguments(call_data, ins.names, decl_param_names)
+                try:
+                    call_data = reorder_arguments(call_data, ins.names, decl_param_names)
+                except Exception as e:
+                    print("exception: ", e)
+                    call_data = []
 
         if isinstance(ins, (Call, NewContract, NewStructure)):
             # We might have stored some arguments for libraries
