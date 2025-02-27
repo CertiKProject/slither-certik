@@ -504,36 +504,48 @@ class SlitherCompilationUnitSolc(CallerContextExpression):
             # Resolve linearized base contracts.
             # Remove the first elem in linearizedBaseContracts as it is the contract itself.
             for i in contract_parser.linearized_base_contracts[1:]:
-                if i in contract_parser.remapping:
-                    target = resolve_remapping_and_renaming(contract_parser, i)
-                    ancestors.append(target)
-                elif i in self._contracts_by_id:
-                    ancestors.append(self._contracts_by_id[i])
-                else:
-                    missing_inheritance = i
+                try:
+                    if i in contract_parser.remapping:
+                        target = resolve_remapping_and_renaming(contract_parser, i)
+                        ancestors.append(target)
+                    elif i in self._contracts_by_id:
+                        ancestors.append(self._contracts_by_id[i])
+                    else:
+                        missing_inheritance = i
+                except Exception as e:
+                    print("exception: ", e)
+                    continue
 
             # Resolve immediate base contracts and attach references.
             for (i, src) in contract_parser.baseContracts:
-                if i in contract_parser.remapping:
-                    target = resolve_remapping_and_renaming(contract_parser, i)
-                    fathers.append(target)
-                    target.add_reference_from_raw_source(src, self.compilation_unit)
-                elif i in self._contracts_by_id:
-                    target = self._contracts_by_id[i]
-                    fathers.append(target)
-                    target.add_reference_from_raw_source(src, self.compilation_unit)
-                else:
-                    missing_inheritance = i
+                try:
+                    if i in contract_parser.remapping:
+                        target = resolve_remapping_and_renaming(contract_parser, i)
+                        fathers.append(target)
+                        target.add_reference_from_raw_source(src, self.compilation_unit)
+                    elif i in self._contracts_by_id:
+                        target = self._contracts_by_id[i]
+                        fathers.append(target)
+                        target.add_reference_from_raw_source(src, self.compilation_unit)
+                    else:
+                        missing_inheritance = i
+                except Exception as e:
+                    print("exception: ", e)
+                    continue
 
             # Resolve immediate base constructor calls.
             for i in contract_parser.baseConstructorContractsCalled:
-                if i in contract_parser.remapping:
-                    target = resolve_remapping_and_renaming(contract_parser, i)
-                    father_constructors.append(target)
-                elif i in self._contracts_by_id:
-                    father_constructors.append(self._contracts_by_id[i])
-                else:
-                    missing_inheritance = i
+                try:
+                    if i in contract_parser.remapping:
+                        target = resolve_remapping_and_renaming(contract_parser, i)
+                        father_constructors.append(target)
+                    elif i in self._contracts_by_id:
+                        father_constructors.append(self._contracts_by_id[i])
+                    else:
+                        missing_inheritance = i
+                except Exception as e:
+                    print("exception: ", e)
+                    continue
 
             contract_parser.underlying_contract.set_inheritance(
                 ancestors, fathers, father_constructors

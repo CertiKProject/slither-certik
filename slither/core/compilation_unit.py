@@ -42,7 +42,9 @@ class Language(Enum):
         if label == "vyper":
             return Language.VYPER
 
-        raise ValueError(f"Unknown language: {label}")
+        #raise ValueError(f"Unknown language: {label}")
+        # default is solc
+        return Language.SOLIDITY
 
 
 # pylint: disable=too-many-instance-attributes,too-many-public-methods
