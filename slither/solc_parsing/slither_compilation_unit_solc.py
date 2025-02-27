@@ -276,8 +276,11 @@ class SlitherCompilationUnitSolc(CallerContextExpression):
                 else:
                     pragma = Pragma(top_level_data["attributes"]["literals"], scope)
                     scope.pragmas.add(pragma)
-                pragma.set_offset(top_level_data["src"], self._compilation_unit)
-                self._compilation_unit.pragma_directives.append(pragma)
+                try:
+                    pragma.set_offset(top_level_data["src"], self._compilation_unit)
+                    self._compilation_unit.pragma_directives.append(pragma)
+                except Exception as e:
+                    print("exception: ", e)
 
             elif top_level_data[self.get_key()] == "UsingForDirective":
                 scope = self.compilation_unit.get_scope(filename)
@@ -319,9 +322,13 @@ class SlitherCompilationUnitSolc(CallerContextExpression):
                         and "unitAlias" in top_level_data["attributes"]
                     ):
                         import_directive.alias = top_level_data["attributes"]["unitAlias"]
-                import_directive.set_offset(top_level_data["src"], self._compilation_unit)
-                self._compilation_unit.import_directives.append(import_directive)
-                self.imports_by_id[referenceId] = import_directive
+                try:
+                    import_directive.set_offset(top_level_data["src"], self._compilation_unit)
+                    self._compilation_unit.import_directives.append(import_directive)
+                    self.imports_by_id[referenceId] = import_directive
+                except Exception as e:
+                    print("exception: ", e)
+                    continue
 
                 get_imported_scope = self.compilation_unit.get_scope(import_directive.filename)
                 scope.accessible_scopes.append(get_imported_scope)

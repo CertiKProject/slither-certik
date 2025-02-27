@@ -432,32 +432,35 @@ def parse_type(
 
         raise SlitherError("Solidity 0.8 not supported with the legacy AST")
 
-    if t[key] == "ArrayTypeName":
-        length = None
-        if is_compact_ast:
-            if t.get("length", None):
-                length = parse_expression(t["length"], caller_context)
-            array_type = parse_type(t["baseType"], next_context)
-        else:
-            if len(t["children"]) == 2:
-                length = parse_expression(t["children"][1], caller_context)
+    try:
+        if t[key] == "ArrayTypeName":
+            length = None
+            if is_compact_ast:
+                if t.get("length", None):
+                    length = parse_expression(t["length"], caller_context)
+                array_type = parse_type(t["baseType"], next_context)
             else:
-                assert len(t["children"]) == 1
-            array_type = parse_type(t["children"][0], next_context)
-        return ArrayType(array_type, length)
+                if len(t["children"]) == 2:
+                    length = parse_expression(t["children"][1], caller_context)
+                else:
+                    assert len(t["children"]) == 1
+                array_type = parse_type(t["children"][0], next_context)
+            return ArrayType(array_type, length)
 
-    if t[key] == "Mapping":
+        if t[key] == "Mapping":
 
-        if is_compact_ast:
-            mappingFrom = parse_type(t["keyType"], next_context)
-            mappingTo = parse_type(t["valueType"], next_context)
-        else:
-            assert len(t["children"]) == 2
+            if is_compact_ast:
+                mappingFrom = parse_type(t["keyType"], next_context)
+                mappingTo = parse_type(t["valueType"], next_context)
+            else:
+                assert len(t["children"]) == 2
 
-            mappingFrom = parse_type(t["children"][0], next_context)
-            mappingTo = parse_type(t["children"][1], next_context)
+                mappingFrom = parse_type(t["children"][0], next_context)
+                mappingTo = parse_type(t["children"][1], next_context)
 
-        return MappingType(mappingFrom, mappingTo)
+            return MappingType(mappingFrom, mappingTo)
+    except Exception as e:
+        print("exception: ", e)
 
     if t[key] == "FunctionTypeName":
 

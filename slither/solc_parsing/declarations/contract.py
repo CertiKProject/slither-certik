@@ -613,12 +613,16 @@ class ContractSolc(CallerContextExpression):
                 self._contract.using_for.update(father.using_for)
             if self.is_compact_ast:
                 for using_for in self._usingForNotParsed:
-                    if "typeName" in using_for and using_for["typeName"]:
-                        type_name: USING_FOR_KEY = parse_type(using_for["typeName"], self)
-                    else:
-                        type_name = "*"
-                    if type_name not in self._contract.using_for:
-                        self._contract.using_for[type_name] = []
+                    try:
+                        if "typeName" in using_for and using_for["typeName"]:
+                            type_name: USING_FOR_KEY = parse_type(using_for["typeName"], self)
+                        else:
+                            type_name = "*"
+                        if type_name not in self._contract.using_for:
+                            self._contract.using_for[type_name] = []
+                    except Exception as e:
+                        print("exception: ", e)
+                        continue
 
                     if "libraryName" in using_for:
                         self._contract.using_for[type_name].append(
