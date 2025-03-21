@@ -1,7 +1,7 @@
 import abc
 import logging
 from pathlib import Path
-from typing import Optional, Dict, Tuple, List
+from typing import Optional, Dict, Tuple, List, Union
 from slither.core.compilation_unit import SlitherCompilationUnit
 from slither.formatters.utils.patches import apply_patch, create_diff
 from slither.tools.mutator.utils.testing_generated_mutant import test_patch
@@ -27,9 +27,8 @@ class AbstractMutator(
         testing_command: str,
         testing_directory: str,
         contract_instance: Contract,
-        solc_remappings: str | None,
+        solc_remappings: Union[str, None],
         verbose: bool,
-        very_verbose: bool,
         output_folder: Path,
         dont_mutate_line: List[int],
         rate: int = 10,
@@ -44,7 +43,6 @@ class AbstractMutator(
         self.timeout = timeout
         self.solc_remappings = solc_remappings
         self.verbose = verbose
-        self.very_verbose = very_verbose
         self.output_folder = output_folder
         self.contract = contract_instance
         self.in_file = self.contract.source_mapping.filename.absolute
@@ -81,7 +79,7 @@ class AbstractMutator(
         (all_patches) = self._mutate()
         if "patches" not in all_patches:
             logger.debug("No patches found by %s", self.NAME)
-            return ([0, 0, 0], [0, 0, 0], self.dont_mutate_line)
+            return [0, 0, 0], [0, 0, 0], self.dont_mutate_line
 
         for file in all_patches["patches"]:  # Note: This should only loop over a single file
             original_txt = self.slither.source_code[file].encode("utf8")
@@ -98,7 +96,6 @@ class AbstractMutator(
                     self.timeout,
                     self.solc_remappings,
                     self.verbose,
-                    self.very_verbose,
                 )
 
                 # count the uncaught mutants, flag RR/CR mutants to skip further mutations
@@ -132,18 +129,4 @@ class AbstractMutator(
                     else:
                         self.total_mutant_counts[2] += 1
 
-                if self.very_verbose:
-                    if self.NAME == "RR":
-                        logger.info(
-                            f"Found {self.uncaught_mutant_counts[0]} uncaught revert mutants so far (out of {self.total_mutant_counts[0]} that compile)"
-                        )
-                    elif self.NAME == "CR":
-                        logger.info(
-                            f"Found {self.uncaught_mutant_counts[1]} uncaught comment mutants so far (out of {self.total_mutant_counts[1]} that compile)"
-                        )
-                    else:
-                        logger.info(
-                            f"Found {self.uncaught_mutant_counts[2]} uncaught tweak mutants so far (out of {self.total_mutant_counts[2]} that compile)"
-                        )
-
-        return (self.total_mutant_counts, self.uncaught_mutant_counts, self.dont_mutate_line)
+        return self.total_mutant_counts, self.uncaught_mutant_counts, self.dont_mutate_line

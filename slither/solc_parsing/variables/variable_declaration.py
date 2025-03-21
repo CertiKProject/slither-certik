@@ -208,14 +208,11 @@ class VariableDeclarationSolc:
             return
         self._was_analyzed = True
 
-        try:
-            if self._elem_to_parse:
-                self._variable.type = parse_type(self._elem_to_parse, caller_context)
-                self._elem_to_parse = None
+        if self._elem_to_parse:
+            self._variable.type = parse_type(self._elem_to_parse, caller_context)
+            self._elem_to_parse = None
 
-            if self._variable.initialized:
-                assert self._initializedNotParsed
-                self._variable.expression = parse_expression(self._initializedNotParsed, caller_context)
-                self._initializedNotParsed = None
-        except Exception as e:
-            print("exception: ", e)
+        if self._variable.initialized:
+            assert self._initializedNotParsed
+            self._variable.expression = parse_expression(self._initializedNotParsed, caller_context)
+            self._initializedNotParsed = None

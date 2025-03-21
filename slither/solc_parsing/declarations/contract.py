@@ -350,7 +350,7 @@ class ContractSolc(CallerContextExpression):
                     if v.visibility != "private"
                 }
             )
-            self._contract.add_variables_ordered(
+            self._contract.add_state_variables_ordered(
                 [
                     var
                     for var in father.state_variables_ordered
@@ -370,7 +370,7 @@ class ContractSolc(CallerContextExpression):
             if var_parser.reference_id is not None:
                 self._contract.state_variables_by_ref_id[var_parser.reference_id] = var
             self._contract.variables_as_dict[var.name] = var
-            self._contract.add_variables_ordered([var])
+            self._contract.add_state_variables_ordered([var])
 
     def _parse_modifier(self, modifier_data: Dict) -> None:
         modif = Modifier(self._contract.compilation_unit)
@@ -613,16 +613,12 @@ class ContractSolc(CallerContextExpression):
                 self._contract.using_for.update(father.using_for)
             if self.is_compact_ast:
                 for using_for in self._usingForNotParsed:
-                    try:
-                        if "typeName" in using_for and using_for["typeName"]:
-                            type_name: USING_FOR_KEY = parse_type(using_for["typeName"], self)
-                        else:
-                            type_name = "*"
-                        if type_name not in self._contract.using_for:
-                            self._contract.using_for[type_name] = []
-                    except Exception as e:
-                        print("exception: ", e)
-                        continue
+                    if "typeName" in using_for and using_for["typeName"]:
+                        type_name: USING_FOR_KEY = parse_type(using_for["typeName"], self)
+                    else:
+                        type_name = "*"
+                    if type_name not in self._contract.using_for:
+                        self._contract.using_for[type_name] = []
 
                     if "libraryName" in using_for:
                         self._contract.using_for[type_name].append(

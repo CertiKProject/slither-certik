@@ -153,12 +153,8 @@ class Slither(
                 sol_parser = SlitherCompilationUnitSolc(compilation_unit_slither)
                 self._parsers.append(sol_parser)
                 for path, ast in compilation_unit.asts.items():
-                    try:
-                        sol_parser.parse_top_level_items(ast, path)
-                        self.add_source_code(path)
-                    except Exception as e:
-                        print("exception: ", e)
-                        continue
+                    sol_parser.parse_top_level_items(ast, path)
+                    self.add_source_code(path)
 
                 for contract in sol_parser._underlying_contract_to_parser:
                     if contract.name.startswith("SlitherInternalTopLevelContract"):
@@ -220,12 +216,9 @@ class Slither(
                 try:
                     parser.analyze_contracts()
                 except Exception as e:
-                    # if self.no_fail:
-                    #     continue
-                    # raise e
-                    print("exception: ", e)
-                    continue
-
+                    if self.no_fail:
+                        continue
+                    raise e
 
     @property
     def detectors(self):

@@ -22,7 +22,12 @@ def compile_generated_mutant(file_path: str, mappings: str) -> bool:
         return False
 
 
-def run_test_cmd(cmd: str, timeout: int | None, target_file: str | None, verbose: bool) -> bool:
+def run_test_cmd(
+    cmd: str,
+    timeout: Union[int, None] = None,
+    target_file: Union[str, None] = None,
+    verbose: bool = False,
+) -> bool:
     """
     function to run codebase tests
     returns: boolean whether the tests passed or not
@@ -86,7 +91,6 @@ def test_patch(  # pylint: disable=too-many-arguments
     timeout: int,
     mappings: Union[str, None],
     verbose: bool,
-    very_verbose: bool,
 ) -> int:
     """
     function to verify whether each patch is caught by tests
@@ -113,7 +117,7 @@ def test_patch(  # pylint: disable=too-many-arguments
 
             return 0  # uncaught
     else:
-        if very_verbose:
+        if verbose:
             logger.info(
                 yellow(
                     f"[{generator_name}] Line {patch['line_number']}: '{patch['old_string']}' ==> '{patch['new_string']}' --> COMPILATION FAILURE"

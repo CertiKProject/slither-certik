@@ -293,7 +293,7 @@ def parse_type(
                 scope = custom_error.contract.file_scope
 
         sl = caller_context.compilation_unit
-        next_context = caller_context.slither_parser
+        next_context = caller_context
         structures_direct_access = list(scope.structures.values())
         all_structuress = [c.structures for c in scope.contracts.values()]
         all_structures = [item for sublist in all_structuress for item in sublist]
@@ -432,35 +432,32 @@ def parse_type(
 
         raise SlitherError("Solidity 0.8 not supported with the legacy AST")
 
-    try:
-        if t[key] == "ArrayTypeName":
-            length = None
-            if is_compact_ast:
-                if t.get("length", None):
-                    length = parse_expression(t["length"], caller_context)
-                array_type = parse_type(t["baseType"], next_context)
+    if t[key] == "ArrayTypeName":
+        length = None
+        if is_compact_ast:
+            if t.get("length", None):
+                length = parse_expression(t["length"], caller_context)
+            array_type = parse_type(t["baseType"], next_context)
+        else:
+            if len(t["children"]) == 2:
+                length = parse_expression(t["children"][1], caller_context)
             else:
-                if len(t["children"]) == 2:
-                    length = parse_expression(t["children"][1], caller_context)
-                else:
-                    assert len(t["children"]) == 1
-                array_type = parse_type(t["children"][0], next_context)
-            return ArrayType(array_type, length)
+                assert len(t["children"]) == 1
+            array_type = parse_type(t["children"][0], next_context)
+        return ArrayType(array_type, length)
 
-        if t[key] == "Mapping":
+    if t[key] == "Mapping":
 
-            if is_compact_ast:
-                mappingFrom = parse_type(t["keyType"], next_context)
-                mappingTo = parse_type(t["valueType"], next_context)
-            else:
-                assert len(t["children"]) == 2
+        if is_compact_ast:
+            mappingFrom = parse_type(t["keyType"], next_context)
+            mappingTo = parse_type(t["valueType"], next_context)
+        else:
+            assert len(t["children"]) == 2
 
-                mappingFrom = parse_type(t["children"][0], next_context)
-                mappingTo = parse_type(t["children"][1], next_context)
+            mappingFrom = parse_type(t["children"][0], next_context)
+            mappingTo = parse_type(t["children"][1], next_context)
 
-            return MappingType(mappingFrom, mappingTo)
-    except Exception as e:
-        print("exception: ", e)
+        return MappingType(mappingFrom, mappingTo)
 
     if t[key] == "FunctionTypeName":
 

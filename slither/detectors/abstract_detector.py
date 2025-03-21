@@ -200,13 +200,9 @@ class AbstractDetector(metaclass=abc.ABCMeta):
 
         # only keep valid result, and remove duplicate
         # Keep only dictionaries
-        try:
-            for r in [output.data for output in self._detect()]:
-                if self.compilation_unit.core.valid_result(r) and r not in results:
-                    results.append(r)
-        except Exception as e:
-            print("exception: ", e)
-
+        for r in [output.data for output in self._detect()]:
+            if self.compilation_unit.core.valid_result(r) and r not in results:
+                results.append(r)
         if results and self.logger:
             self._log_result(results)
         if self.compilation_unit.core.generate_patches:
