@@ -323,8 +323,12 @@ class SlitherCompilationUnitSolc(CallerContextExpression):
                 self._compilation_unit.import_directives.append(import_directive)
                 self.imports_by_id[referenceId] = import_directive
 
-                get_imported_scope = self.compilation_unit.get_scope(import_directive.filename)
-                scope.accessible_scopes.append(get_imported_scope)
+                try:
+                    get_imported_scope = self.compilation_unit.get_scope(import_directive.filename)
+                    scope.accessible_scopes.append(get_imported_scope)
+                except:
+                    print(f"Warning: import file [{import_directive.filename}] error. maybe it is outside of project.")
+                    continue
 
             elif top_level_data[self.get_key()] == "StructDefinition":
                 st = StructureTopLevel(self.compilation_unit, scope)

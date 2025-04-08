@@ -206,9 +206,12 @@ class Slither(
             try:
                 parser.parse_contracts()
             except Exception as e:
-                if self.no_fail:
-                    continue
-                raise e
+                #if self.no_fail:
+                #    continue
+                #raise e
+                print(f"Warning: parse contract error. maybe it is outside of project.")
+                continue
+
 
         # skip_analyze is only used for testing
         if not skip_analyze:
@@ -216,9 +219,12 @@ class Slither(
                 try:
                     parser.analyze_contracts()
                 except Exception as e:
-                    if self.no_fail:
-                        continue
-                    raise e
+                    #if self.no_fail:
+                    #    continue
+                    #raise e
+                    print(f"Warning: analyze contract error. maybe it is outside of project.")
+                    continue
+
 
     @property
     def detectors(self):
