@@ -153,8 +153,12 @@ class Slither(
                 sol_parser = SlitherCompilationUnitSolc(compilation_unit_slither)
                 self._parsers.append(sol_parser)
                 for path, ast in compilation_unit.asts.items():
-                    sol_parser.parse_top_level_items(ast, path)
-                    self.add_source_code(path)
+                    try:
+                        sol_parser.parse_top_level_items(ast, path)
+                        self.add_source_code(path)
+                    except:
+                        print(f"Warning: parse unit error. maybe it is outside of project.")
+                        pass
 
                 for contract in sol_parser._underlying_contract_to_parser:
                     if contract.name.startswith("SlitherInternalTopLevelContract"):
@@ -295,7 +299,15 @@ class Slither(
         """
 
         self.load_previous_results()
-        results = [d.detect() for d in self._detectors]
+        #results = [d.detect() for d in self._detectors]
+        results = []
+        for d in self._detectors:
+            try:
+                r = d.detect()
+                results.append(r)
+            except:
+                print(f"Warning: run detector error. maybe it is outside of project.")
+                continue
 
         self.write_results_to_hide()
         return results
