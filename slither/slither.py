@@ -148,12 +148,8 @@ class Slither(SlitherCore):
                 sol_parser = SlitherCompilationUnitSolc(compilation_unit_slither)
                 self._parsers.append(sol_parser)
                 for path, ast in compilation_unit.asts.items():
-                    try:
-                        sol_parser.parse_top_level_items(ast, path)
-                        self.add_source_code(path)
-                    except:
-                        print(f"Warning: parse unit error. maybe it is outside of project.")
-                        pass
+                    sol_parser.parse_top_level_items(ast, path)
+                    self.add_source_code(path)
 
                 for contract in sol_parser._underlying_contract_to_parser:
                     if contract.name.startswith("SlitherInternalTopLevelContract"):
@@ -205,12 +201,9 @@ class Slither(SlitherCore):
             try:
                 parser.parse_contracts()
             except Exception as e:
-                #if self.no_fail:
-                #    continue
-                #raise e
-                print(f"Warning: parse contract error. maybe it is outside of project.")
-                continue
-
+                if self.no_fail:
+                    continue
+                raise e
 
         # skip_analyze is only used for testing
         if not skip_analyze:
@@ -218,12 +211,9 @@ class Slither(SlitherCore):
                 try:
                     parser.analyze_contracts()
                 except Exception as e:
-                    #if self.no_fail:
-                    #    continue
-                    #raise e
-                    print(f"Warning: analyze contract error. maybe it is outside of project.")
-                    continue
-
+                    if self.no_fail:
+                        continue
+                    raise e
 
     @property
     def detectors(self):
@@ -294,15 +284,7 @@ class Slither(SlitherCore):
         """
 
         self.load_previous_results()
-        #results = [d.detect() for d in self._detectors]
-        results = []
-        for d in self._detectors:
-            try:
-                r = d.detect()
-                results.append(r)
-            except:
-                print(f"Warning: run detector error. maybe it is outside of project.")
-                continue
+        results = [d.detect() for d in self._detectors]
 
         self.write_results_to_hide()
         return results
