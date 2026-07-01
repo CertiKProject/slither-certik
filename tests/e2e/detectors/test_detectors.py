@@ -1,7 +1,6 @@
 import os
 from pathlib import Path
 import sys
-from typing import Type, Optional, List
 
 import pytest
 from crytic_compile import CryticCompile, save_to_zip
@@ -14,13 +13,13 @@ from slither.detectors.abstract_detector import AbstractDetector
 from slither.detectors import all_detectors
 
 
-class Test:  # pylint: disable=too-few-public-methods
+class Test:
     def __init__(
         self,
-        detector: Type[AbstractDetector],
+        detector: type[AbstractDetector],
         test_file: str,
         solc_ver: str,
-        additional_files: Optional[List[str]] = None,
+        additional_files: list[str] | None = None,
     ):
         """
 
@@ -40,7 +39,7 @@ class Test:  # pylint: disable=too-few-public-methods
             self.additional_files = additional_files
 
 
-def set_solc(test_item: Test):  # pylint: disable=too-many-lines
+def set_solc(test_item: Test):
     # hacky hack hack to pick the solc version we want
     env = dict(os.environ)
 
@@ -887,6 +886,11 @@ ALL_TESTS = [
         all_detectors.ReentrancyEvent,
         "reentrancy-events.sol",
         "0.7.6",
+    ),
+    Test(
+        all_detectors.ReentrancyBalance,
+        "reentrancy_balance.sol",
+        "0.8.10",
     ),
     Test(
         all_detectors.IncorrectStrictEquality,
@@ -1754,6 +1758,11 @@ ALL_TESTS = [
         "optimism_deprecation.sol",
         "0.8.20",
     ),
+    Test(
+        all_detectors.UnindexedEventAddress,
+        "unindexed_event_address.sol",
+        "0.8.22",
+    ),
     # Test(
     #     all_detectors.UnusedImport,
     #     "ConstantContractLevelUsedInContractTest.sol",
@@ -1945,7 +1954,7 @@ GENERIC_PATH = "/GENERIC_PATH"
 
 TEST_DATA_DIR = Path(__file__).resolve().parent / "test_data"
 
-# pylint: disable=too-many-locals
+
 @pytest.mark.parametrize("test_item", ALL_TESTS, ids=id_test)
 def test_detector(test_item: Test, snapshot):
     test_dir_path = Path(

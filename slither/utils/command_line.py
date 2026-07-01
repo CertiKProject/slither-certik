@@ -5,7 +5,6 @@ import os
 import re
 import logging
 from collections import defaultdict
-from typing import Dict, List, Type, Union
 
 from crytic_compile.cryticparser.defaults import (
     DEFAULTS_FLAG_IN_CONFIG as DEFAULTS_FLAG_IN_CONFIG_CRYTIC_COMPILE,
@@ -107,11 +106,11 @@ def read_config_file(args: argparse.Namespace) -> None:
 
 
 def output_to_markdown(
-    detector_classes: List[Type[AbstractDetector]],
-    printer_classes: List[Type[AbstractPrinter]],
+    detector_classes: list[type[AbstractDetector]],
+    printer_classes: list[type[AbstractPrinter]],
     filter_wiki: str,
 ) -> None:
-    def extract_help(cls: Union[Type[AbstractDetector], Type[AbstractPrinter]]) -> str:
+    def extract_help(cls: type[AbstractDetector] | type[AbstractPrinter]) -> str:
         if cls.WIKI == "":
             return cls.HELP
         return f"[{cls.HELP}]({cls.WIKI})"
@@ -123,7 +122,7 @@ def output_to_markdown(
         # dont show the backdoor example
         if argument == "backdoor":
             continue
-        if not filter_wiki in detector.WIKI:
+        if filter_wiki not in detector.WIKI:
             continue
         help_info = extract_help(detector)
         impact = detector.IMPACT
@@ -135,7 +134,7 @@ def output_to_markdown(
         detectors_list, key=lambda element: (element[2], element[3], element[0])
     )
     idx = 1
-    for (argument, help_info, impact, confidence) in detectors_list:
+    for argument, help_info, impact, confidence in detectors_list:
         print(f"{idx} | `{argument}` | {help_info} | {classification_txt[impact]} | {confidence}")
         idx = idx + 1
 
@@ -149,7 +148,7 @@ def output_to_markdown(
     # Sort by impact, confidence, and name
     printers_list = sorted(printers_list, key=lambda element: (element[0]))
     idx = 1
-    for (argument, help_info) in printers_list:
+    for argument, help_info in printers_list:
         print(f"{idx} | `{argument}` | {help_info}")
         idx = idx + 1
 
@@ -182,10 +181,10 @@ def convert_result_to_markdown(txt: str) -> str:
 
 
 def output_results_to_markdown(
-    all_results: List[Dict], checklistlimit: str, show_ignored_findings: bool
+    all_results: list[dict], checklistlimit: str, show_ignored_findings: bool
 ) -> None:
     checks = defaultdict(list)
-    info: Dict = defaultdict(dict)
+    info: dict = defaultdict(dict)
     for results_ in all_results:
         checks[results_["check"]].append(results_)
         info[results_["check"]] = {
@@ -205,10 +204,10 @@ def output_results_to_markdown(
         )
 
     counter = 0
-    for (check, results) in checks.items():
+    for check, results in checks.items():
         print(f"## {check}")
-        print(f'Impact: {info[check]["impact"]}')
-        print(f'Confidence: {info[check]["confidence"]}')
+        print(f"Impact: {info[check]['impact']}")
+        print(f"Confidence: {info[check]['confidence']}")
         additional = False
         if checklistlimit and len(results) > 5:
             results = results[0:5]
@@ -224,8 +223,7 @@ def output_results_to_markdown(
             print(f"**More results were found, check [{checklistlimit}]({checklistlimit})**")
 
 
-def output_wiki(detector_classes: List[Type[AbstractDetector]], filter_wiki: str) -> None:
-
+def output_wiki(detector_classes: list[type[AbstractDetector]], filter_wiki: str) -> None:
     # Sort by impact, confidence, and name
     detectors_list = sorted(
         detector_classes,
@@ -237,7 +235,7 @@ def output_wiki(detector_classes: List[Type[AbstractDetector]], filter_wiki: str
         # dont show the backdoor example
         if argument == "backdoor":
             continue
-        if not filter_wiki in detector.WIKI:
+        if filter_wiki not in detector.WIKI:
             continue
         check = detector.ARGUMENT
         impact = classification_txt[detector.IMPACT]
@@ -261,7 +259,7 @@ def output_wiki(detector_classes: List[Type[AbstractDetector]], filter_wiki: str
         print(recommendation)
 
 
-def output_detectors(detector_classes: List[Type[AbstractDetector]]) -> None:
+def output_detectors(detector_classes: list[type[AbstractDetector]]) -> None:
     detectors_list = []
     for detector in detector_classes:
         argument = detector.ARGUMENT
@@ -279,16 +277,15 @@ def output_detectors(detector_classes: List[Type[AbstractDetector]]) -> None:
         detectors_list, key=lambda element: (element[2], element[3], element[0])
     )
     idx = 1
-    for (argument, help_info, impact, confidence) in detectors_list:
+    for argument, help_info, impact, confidence in detectors_list:
         table.add_row([str(idx), argument, help_info, classification_txt[impact], confidence])
         idx = idx + 1
     print(table)
 
 
-# pylint: disable=too-many-locals
 def output_detectors_json(
-    detector_classes: List[Type[AbstractDetector]],
-) -> List[Dict]:
+    detector_classes: list[type[AbstractDetector]],
+) -> list[dict]:
     detectors_list = []
     for detector in detector_classes:
         argument = detector.ARGUMENT
@@ -348,7 +345,7 @@ def output_detectors_json(
     return table
 
 
-def output_printers(printer_classes: List[Type[AbstractPrinter]]) -> None:
+def output_printers(printer_classes: list[type[AbstractPrinter]]) -> None:
     printers_list = []
     for printer in printer_classes:
         argument = printer.ARGUMENT
@@ -359,7 +356,7 @@ def output_printers(printer_classes: List[Type[AbstractPrinter]]) -> None:
     # Sort by impact, confidence, and name
     printers_list = sorted(printers_list, key=lambda element: (element[0]))
     idx = 1
-    for (argument, help_info) in printers_list:
+    for argument, help_info in printers_list:
         # Clean multi line HELP info
         table.add_row([str(idx), argument, " ".join(x.strip() for x in help_info.splitlines())])
         idx = idx + 1
@@ -367,7 +364,7 @@ def output_printers(printer_classes: List[Type[AbstractPrinter]]) -> None:
     print(table)
 
 
-def output_printers_json(printer_classes: List[Type[AbstractPrinter]]) -> List[Dict]:
+def output_printers_json(printer_classes: list[type[AbstractPrinter]]) -> list[dict]:
     printers_list = []
     for printer in printer_classes:
         argument = printer.ARGUMENT
@@ -379,7 +376,7 @@ def output_printers_json(printer_classes: List[Type[AbstractPrinter]]) -> List[D
     printers_list = sorted(printers_list, key=lambda element: (element[0]))
     idx = 1
     table = []
-    for (argument, help_info) in printers_list:
+    for argument, help_info in printers_list:
         table.append({"index": idx, "check": argument, "title": help_info})
         idx = idx + 1
     return table
@@ -406,6 +403,6 @@ def check_and_sanitize_markdown_root(markdown_root: str) -> str:
                 "Replacing 'tree' with 'blob' in markdown_root url for better code referencing"
             )
             positions = match.span(4)
-            markdown_root = f"{markdown_root[:positions[0]]}blob{markdown_root[positions[1]:]}"
+            markdown_root = f"{markdown_root[: positions[0]]}blob{markdown_root[positions[1] :]}"
 
     return markdown_root
